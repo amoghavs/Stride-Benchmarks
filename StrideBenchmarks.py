@@ -34,13 +34,17 @@ def main(argv):
 	ConfigParams={}
 	ConfigParams['size']=[]
 	ConfigParams['stride']=[]
-	ConfigParams['alloc']=[]		
+	ConfigParams['alloc']=[]
+	ConfigParams['datastructure']=[]		
 	LineCount=0;
 	DimNotFound=1;
 	SizeNotFound=1;
 	StrideNotFound=1;
 	AllocNotFound=1;
+	DSNotFound=1;
 	ThisArray=[]
+	NumVars=0
+	NumVarNotFound=1
 	# Tabs: 1
 	for CurrLine in ConfigContents:
 		LineCount+=1;
@@ -55,6 +59,16 @@ def main(argv):
 					print "\n\t Number of dims is "+str(Dims)+"\n"	
 					LineNotProcessed=0
 					DimNotFound=0
+		if NumVarNotFound:
+			MatchObj=re.match(r'\s*\#vars',CurrLine)
+			if MatchObj:
+				DimsLine=re.match(r'\s*\#vars\s*(\d+)*',CurrLine)
+				if DimsLine:
+					NumVars=int(DimsLine.group(1))
+					print "\n\t Number of variables is "+str(NumVars)+"\n"	
+					LineNotProcessed=0
+					NumVarNotFound=0			
+								
 		else:
 			if SizeNotFound:
 				MatchObj=re.match(r'\s*\#size',CurrLine)
@@ -62,16 +76,24 @@ def main(argv):
 					tmp=re.split(' ',CurrLine)
 					Sizes=re.split(',',tmp[1])
 					if Sizes:
-						SizeNotFound=0;
 						LineNotProcessed=0
 						CurrDim=0;
 						for CurrSize in Sizes:
-							ConfigParams['size'].append( CurrSize);
-							CurrDim+=1				
-							print "\n\t Size for dim "+str(CurrDim)+" is "+str(CurrSize)+"\n" 
+							CheckSpace=re.match(r'^\s*$',CurrSize)
+						        if(CheckSpace):
+						       		print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
+						       		sys.exit(0)
+						       	else:
+								CurrSize=re.sub(r'^\s*','',CurrSize)
+								CurrSize=re.sub(r'\s*$','',CurrSize)						       	
+								ConfigParams['size'].append( CurrSize)
+								CurrDim+=1				
+								print "\n\t Size for dim "+str(CurrDim)+" is "+str(CurrSize)+"\n" 
 						if(CurrDim != Dims):
 							print "\n\t The size parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(Dims)+"\n";
 							sys.exit(0)
+						else:
+							SizeNotFound=0
 
 			if StrideNotFound:
 				MatchObj=re.match(r'\s*\#stride',CurrLine)
@@ -79,16 +101,24 @@ def main(argv):
 					tmp=re.split(' ',CurrLine)
 					Strides=re.split(',',tmp[1])
 					if Strides:
-						StrideNotFound=0
 						LineNotProcessed=0
 						CurrDim=0;
 						for CurrStride in Strides:
-							ConfigParams['stride'].append( CurrStride);
-							CurrDim+=1				
-							print "\n\t Stride for dim "+str(CurrDim)+" is "+str(CurrStride)+"\n" 
-						if(CurrDim != Dims):
-							print "\n\t The size parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(Dims)+"\n";
-							sys.exit(0)	
+							CheckSpace=re.match(r'^\s*$',CurrStride)
+						        if(CheckSpace):
+						       		print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
+						       		sys.exit(0)						
+							else:
+								CurrStride=re.sub(r'^\s*','',CurrStride)
+								CurrStride=re.sub(r'\s*$','',CurrStride)							
+								ConfigParams['stride'].append( CurrStride);
+								CurrDim+=1				
+								print "\n\t Stride for dim "+str(CurrDim)+" is "+str(CurrStride)+"\n" 
+						if(CurrDim != NumVars):
+							print "\n\t The stride parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(NumVars)+"\n";
+							sys.exit(0)
+						else:
+							StrideNotFound=0	
 
 			if AllocNotFound:
 				MatchObj=re.match(r'\s*\#alloc',CurrLine)
@@ -96,23 +126,87 @@ def main(argv):
 					tmp=re.split(' ',CurrLine)
 					Allocs=re.split(',',tmp[1])
 					if Allocs:
-						AllocNotFound=0
 						LineNotProcessed=0
 						CurrDim=0;
 						for CurrAlloc in Allocs:
-							ConfigParams['alloc'].append( CurrAlloc);
-							CurrDim+=1				
-							print "\n\t Alloc for dim "+str(CurrDim)+" is "+str(CurrAlloc)+"\n" 					
-						if(CurrDim != Dims):
-							print "\n\t The size parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(Dims)+"\n";
-							sys.exit(0)		
+							CheckSpace=re.match(r'^\s*$',CurrAlloc)
+						        if(CheckSpace):
+						       		print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
+						       		sys.exit(0)						
+							else:	
+								CurrAlloc=re.sub(r'^\s*','',CurrAlloc)
+								CurrAlloc=re.sub(r'\s*$','',CurrAlloc)					
+								ConfigParams['alloc'].append(CurrAlloc);
+								CurrDim+=1				
+								print "\n\t Alloc for dim "+str(CurrDim)+" is "+str(CurrAlloc)+"\n" 					
+						if(CurrDim != NumVars):
+							print "\n\t The allocation parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(NumVars)+"\n";
+							sys.exit(0)
+							
+						else:
+							AllocNotFound=0	
+
+			if DSNotFound:
+				MatchObj=re.match(r'\s*\#datastructure',CurrLine)
+				if MatchObj:
+					tmp=re.split(' ',CurrLine)
+					DS=re.split(',',tmp[1])
+					if DS:
+						LineNotProcessed=0
+						CurrDim=0;
+						for CurrDS in DS:
+							CheckSpace=re.match(r'^\s*$',CurrDS)
+						        if(CheckSpace):
+						       		print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
+						       		sys.exit(0)						
+							else:
+								CurrDS=re.sub(r'\s*$','',CurrDS)
+								ConfigParams['datastructure'].append( CurrDS);
+								CurrDim+=1				
+								print "\n\t Alloc for dim "+str(CurrDim)+" is "+str(CurrDS)+"\n" 					
+						if(CurrDim != NumVars):
+							print "\n\t The data structure parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(NumVars)+"\n";
+							sys.exit(0)
+						else:
+							DSNotFound=0		
+
+
 		if LineNotProcessed:
 			print "\n\t Info is not processed in line: "+str(LineCount)+"\n";
 		
 		
-			
-	if(~(DimNotFound and SizeNotFound and StrideNotFound and AllocNotFound)):
+	#Tabs: 1		
+	if(~(NumVarNotFound and DimNotFound and SizeNotFound and StrideNotFound and AllocNotFound and DSNotFound)):
 		print "\n\t The config file has all the required info: #dims, size and allocation for all the dimensions"	
+		ArrayAlloc=[]
+		for index in range(NumVars):
+			VarDecl=''
+			if(ConfigParams['datastructure'][index]=='f' or ConfigParams['datastructure'][index]=='float'):
+				VarDecl='float ' 
+				print "\n\t Allocated float to variable "+str(index)
+			elif(ConfigParams['datastructure'][index]=='d' or ConfigParams['datastructure'][index]=='double'):
+				VarDecl='double ' 
+				print "\n\t Allocated double to variable "+str(index)				
+			elif(ConfigParams['datastructure'][index]=='i' or ConfigParams['datastructure'][index]=='integer'):
+				VarDecl='int ' 
+				print "\n\t Allocated integer to variable "+str(index)								
+			else:
+				print "\n\t Supported datastructure is only float, double, integer. Dimension "+str(index)+" requests one of the nonsupported datastructure: "+str(ConfigParams['datastructure'][index])+"\n"
+				sys.exit(0)
+			if( ConfigParams['alloc'][index]=='d' or ConfigParams['alloc'][index]=='dynamic'):
+				VarDecl+='* Var'+str(index)
+				for CurrDim in range(Dims):
+				
+			else:
+				VarDecl+=' Var'+str(index)
+				for CurrDim in range(Dims):
+					VarDecl+='['+str(ConfigParams['size'][CurrDim])+']'
+				print "\n\t Variable declaration for variable "+str(index)+" is static and is as follows: "+str(VarDecl)+"\n"
+	
+			#ArrayAlloc[index]=[]
+	
+	else:
+		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "		
 			
 		
 		
