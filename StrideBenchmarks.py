@@ -182,20 +182,44 @@ def main(argv):
 		for index in range(NumVars):
 			VarDecl=''
 			if(ConfigParams['datastructure'][index]=='f' or ConfigParams['datastructure'][index]=='float'):
-				VarDecl='float ' 
+				VarDecl='float' 
 				print "\n\t Allocated float to variable "+str(index)
 			elif(ConfigParams['datastructure'][index]=='d' or ConfigParams['datastructure'][index]=='double'):
-				VarDecl='double ' 
+				VarDecl='double' 
 				print "\n\t Allocated double to variable "+str(index)				
 			elif(ConfigParams['datastructure'][index]=='i' or ConfigParams['datastructure'][index]=='integer'):
-				VarDecl='int ' 
+				VarDecl='int' 
 				print "\n\t Allocated integer to variable "+str(index)								
 			else:
 				print "\n\t Supported datastructure is only float, double, integer. Dimension "+str(index)+" requests one of the nonsupported datastructure: "+str(ConfigParams['datastructure'][index])+"\n"
 				sys.exit(0)
 			if( ConfigParams['alloc'][index]=='d' or ConfigParams['alloc'][index]=='dynamic'):
-				VarDecl+='* Var'+str(index)
+				datatype=VarDecl
+				var=' Var'+str(index)
+				prefix=''
+				suffix=''
 				for CurrDim in range(Dims):
+				   prefix+='*'
+				for CurrDim in range(Dims-1):
+				   suffix+='*'				   
+				VarDecl+=prefix+var
+				print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
+				DynAlloc=[]
+				#if(Dims>1):
+				tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * sizeof('+datatype+suffix+'))'		
+				DynAlloc.append(tmp);
+				  		
+				print "\n\t This is how the first malloc statement look: "+str(tmp)+"\n"
+				indices=[]
+				for i in range(Dims):
+					indices.append('index'+str(i))
+					
+				tmp=' int '
+				for i in range(Dims-1):
+					tmp+=indices[i]+','	
+				tmp+=indices[len(indices)-1]+';'
+				print "\n\t This is how the indices will look: "+tmp+" \n";
+				
 				
 			else:
 				VarDecl+=' Var'+str(index)
