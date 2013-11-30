@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
 #### Pending items:
-# * To allocate stride*limit number of elements.
-# * To write allocated elements into a file.
+# * To allocate stride*limit number of elements. -  Done
+# * To write allocated elements into a file. - Done
 #
 
 import sys, getopt,re
@@ -10,6 +10,57 @@ import sys, getopt,re
 def usage():
 	print "StrideBenchmarks.py -c/--config file with all the configuration.\n "
 
+
+def StridedLoop(Stride,StrideDim,A,ConfigParams):
+    if( (StrideDim > ConfigParams['Dims']) or (StrideDim < 0) ):
+      print "\n\t ERROR: For variaable "+str(A)+" a loop with stride access: "+str(StrideDim)+" has been requested, which is illegal!"
+      sys.exit(0)
+
+    ThisLoop=[]
+    ThisLoop.append('Sum=0;')
+    tmp=' This is the variable I am using: '+str(A)
+    NumForLoops=ConfigParams['Dims']
+    LHSindices=''
+    RHSindices=''
+    
+
+    for j in range(NumForLoops):
+
+		if(j==StrideDim):
+			RHSindices+='['+str(ConfigParams['indices'][j])+' +'+str(StrideDim)+' ]'
+			if(StrideDim>1):
+				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+= '+str(StrideDim)+')'
+			else:
+				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+			
+			print "\n\t Boo yeah: "+str(StrideDim)+ThisForLoop+ "\n"
+		elif(j!=StrideDim):
+			RHSindices+='['+str(ConfigParams['indices'][j])+']'	
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+		
+		TabSpace='\t'
+		for k in range(j):
+			TabSpace+='\t'
+		ThisForLoop=TabSpace+ThisForLoop
+		ThisLoop.append(ThisForLoop)
+		ThisLoop.append(TabSpace+'{')
+		print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
+		LHSindices+='['+str(ConfigParams['indices'][j])+']'
+
+    TabSpace=''
+    for k in range(NumForLoops):
+		TabSpace+='\t'
+    eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum+'+str(A)+' + '+str(A)+RHSindices+';'
+    print "\n So, the equation is: "+str(eqn)	
+    ThisLoop.append(eqn)
+    for k in range(NumForLoops):
+    	TabSpace='' #\t'
+    	for l in range(NumForLoops-k):
+    		TabSpace+="\t"
+    	ThisLoop.append(TabSpace+'}')
+    
+    
+    return ThisLoop
 
 def main(argv):
 	config=''
@@ -189,18 +240,18 @@ def main(argv):
 		print "\n\t The config file has all the required info: #dims, size and allocation for all the dimensions"	
 
 		InitAlloc=[]
-		indices=[]
+		ConfigParams['indices']=[]
 		tmp='#include<stdio.h>'
 		InitAlloc.append(tmp)
 		tmp='#include<stdlib.h>'
 		InitAlloc.append(tmp)		
 		for i in range(ConfigParams['Dims']):
-			indices.append('index'+str(i))
+			ConfigParams['indices'].append('index'+str(i))
 				
 		tmp=' int '
 		for i in range(ConfigParams['Dims']-1):
-			tmp+=indices[i]+','	
-		tmp+=indices[len(indices)-1]+';'
+			tmp+=ConfigParams['indices'][i]+','	
+		tmp+=ConfigParams['indices'][len(ConfigParams['indices'])-1]+';'
 		print "\n\t This is how the indices will look: "+tmp+" \n";							
 		InitAlloc.append(tmp);			
 		for index in range(ConfigParams['NumVars']):
@@ -231,7 +282,7 @@ def main(argv):
 				#print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
 				DynAlloc=[]
 				#if(Dims>1):
-				tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * sizeof('+datatype+suffix+'))'		
+				tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'		
 				DynAlloc.append(tmp);
 				  		
 				print "\n\t This is how the first malloc statement look: "+str(tmp)+"\n"
@@ -243,10 +294,10 @@ def main(argv):
 						NumForLoops=i+1
 						MallocLHS=var
 						for j in range(NumForLoops):
-							ThisForLoop='for('+str(indices[j])+'=0 ; '+	str(indices[j])+' < '+str(ConfigParams['size'][j])+' ; '+str(indices[j])+'+=1)'
+							ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 							print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
 							DynAlloc.append(ThisForLoop);
-							MallocLHS+='['+str(indices[j])+']'
+							MallocLHS+='['+str(ConfigParams['indices'][j])+']'
 						prefix=''
 						suffix=''
 						for CurrDim in range(ConfigParams['Dims']-i-1):
@@ -254,7 +305,7 @@ def main(argv):
 						for CurrDim in range(ConfigParams['Dims']-i-2):
 						   suffix+='*'	
 
-						MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * sizeof('+datatype+suffix+'))'		
+						MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'		
 						DynAlloc.append(MallocEqn)
 				   		print "\t The malloc equation is: "+str(MallocEqn)+"\n"
 				
@@ -298,19 +349,24 @@ def main(argv):
 			print "\n\t Line: "+str(DynAllocLinesCount)+" contents: "+str(DynAlloc[i])
 			f.write("\n\t "+str(DynAlloc[i])+"\n")
 		
-		f.close()
+		#f.close()
 						
 	else:
 		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "		
 			
 		
+	ThisLoop=StridedLoop(0,2,'Var1',ConfigParams)
+		
+	# PENDING: Writing to a file can be shifted into a routine!	
+	f.write("\n\n")
+	ThisLoopAllocLinesCount=0
+	for i in range(len(ThisLoop)):
+		ThisLoopAllocLinesCount+=1
+		f.write("\n\t "+str(ThisLoop[i])+"\n")
 		
 		
-		
-		
-		
-		
-		
+	f.write("\n\n")	
+	f.close()
 		
 		
 		
