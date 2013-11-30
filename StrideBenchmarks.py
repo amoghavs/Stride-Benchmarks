@@ -178,7 +178,17 @@ def main(argv):
 	#Tabs: 1		
 	if(~(NumVarNotFound and DimNotFound and SizeNotFound and StrideNotFound and AllocNotFound and DSNotFound)):
 		print "\n\t The config file has all the required info: #dims, size and allocation for all the dimensions"	
-		ArrayAlloc=[]
+		InitAlloc=[]
+		indices=[]
+		for i in range(Dims):
+			indices.append('index'+str(i))
+				
+		tmp=' int '
+		for i in range(Dims-1):
+			tmp+=indices[i]+','	
+		tmp+=indices[len(indices)-1]+';'
+		print "\n\t This is how the indices will look: "+tmp+" \n";							
+		InitAlloc.append(tmp);			
 		for index in range(NumVars):
 			VarDecl=''
 			if(ConfigParams['datastructure'][index]=='f' or ConfigParams['datastructure'][index]=='float'):
@@ -193,6 +203,7 @@ def main(argv):
 			else:
 				print "\n\t Supported datastructure is only float, double, integer. Dimension "+str(index)+" requests one of the nonsupported datastructure: "+str(ConfigParams['datastructure'][index])+"\n"
 				sys.exit(0)
+				
 			if( ConfigParams['alloc'][index]=='d' or ConfigParams['alloc'][index]=='dynamic'):
 				datatype=VarDecl
 				var=' Var'+str(index)
@@ -203,22 +214,35 @@ def main(argv):
 				for CurrDim in range(Dims-1):
 				   suffix+='*'				   
 				VarDecl+=prefix+var
-				print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
+				#print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
 				DynAlloc=[]
 				#if(Dims>1):
 				tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * sizeof('+datatype+suffix+'))'		
 				DynAlloc.append(tmp);
 				  		
 				print "\n\t This is how the first malloc statement look: "+str(tmp)+"\n"
-				indices=[]
-				for i in range(Dims):
-					indices.append('index'+str(i))
-					
-				tmp=' int '
-				for i in range(Dims-1):
-					tmp+=indices[i]+','	
-				tmp+=indices[len(indices)-1]+';'
-				print "\n\t This is how the indices will look: "+tmp+" \n";
+
+				
+				if(Dims>1):
+					NumForLoops=''
+					for i in range(Dims-1):
+						NumForLoops=i+1
+						MallocLHS=var
+						for j in range(NumForLoops):
+							ThisForLoop='for('+str(indices[j])+'=0 ; '+	str(indices[j])+' < '+str(ConfigParams['size'][j])+' ; '+str(indices[j])+'+=1)'
+							print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
+							DynAlloc.append(ThisForLoop);
+							MallocLHS+='['+str(indices[j])+']'
+						prefix=''
+						suffix=''
+						for CurrDim in range(Dims-i-1):
+						   prefix+='*'
+						for CurrDim in range(Dims-i-2):
+						   suffix+='*'	
+
+						MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * sizeof('+datatype+suffix+'))'		
+						DynAlloc.append(MallocEqn)
+				   		print "\t The malloc equation is: "+str(MallocEqn)+"\n"
 				
 				
 			else:
@@ -227,8 +251,11 @@ def main(argv):
 					VarDecl+='['+str(ConfigParams['size'][CurrDim])+']'
 				print "\n\t Variable declaration for variable "+str(index)+" is static and is as follows: "+str(VarDecl)+"\n"
 	
-			#ArrayAlloc[index]=[]
-	
+			#InitAlloc[index]=[]
+			DynAllocLinesCount=0;
+		for i in range(len(DynAlloc)):
+			DynAllocLinesCount+=1
+			print "\n\t Line: "+str(DynAllocLinesCount)+" contents: "+str(DynAlloc[i])
 	else:
 		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "		
 			
