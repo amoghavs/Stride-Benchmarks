@@ -187,7 +187,7 @@ def main(argv):
 	#Tabs: 1		
 	if(~(NumVarNotFound and DimNotFound and SizeNotFound and StrideNotFound and AllocNotFound and DSNotFound)):
 		print "\n\t The config file has all the required info: #dims, size and allocation for all the dimensions"	
-		#SrcFileName='StrideBenchmarks_'+str(ConfigParams
+
 		InitAlloc=[]
 		indices=[]
 		tmp='#include<stdio.h>'
@@ -267,16 +267,38 @@ def main(argv):
 				InitAlloc.append(VarDecl)
 	
 			#InitAlloc[index]=[]
-		DynAllocLinesCount=0;
-		for i in range(len(DynAlloc)):
-			DynAllocLinesCount+=1
-			print "\n\t Line: "+str(DynAllocLinesCount)+" contents: "+str(DynAlloc[i])
+
+
+		SizeString=''
+		for i in range(ConfigParams['Dims']-1):
+			SizeString+=str(ConfigParams['size'][i])+'_'
+		SizeString+=str(ConfigParams['size'][ConfigParams['Dims']-1])
 		
+		StrideString=''
+		for i in range(ConfigParams['NumVars']-1):
+			StrideString+=str(ConfigParams['stride'][i])+'_'
+		StrideString+=str(ConfigParams['stride'][ConfigParams['NumVars']-1])
+			
+		SrcFileName='StrideBenchmarks_'+str(ConfigParams['NumVars'])+"vars_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_'+str(StrideString)+'stride.c'
+		
+		print "\n\t Source file name: "+str(SrcFileName)+"\n"		
+		f=open(SrcFileName,'w')			
+
+
 		InitAllocLinesCount=0;
 		for i in range(len(InitAlloc)):
 			InitAllocLinesCount+=1
 			print "\n\t Line: "+str(InitAllocLinesCount)+" contents: "+str(InitAlloc[i])
-			
+			f.write("\n\t "+str(InitAlloc[i]))
+
+		f.write("\n\n")	
+		DynAllocLinesCount=0;
+		for i in range(len(DynAlloc)):
+			DynAllocLinesCount+=1
+			print "\n\t Line: "+str(DynAllocLinesCount)+" contents: "+str(DynAlloc[i])
+			f.write("\n\t "+str(DynAlloc[i])+"\n")
+		
+		f.close()
 						
 	else:
 		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "		
