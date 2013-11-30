@@ -1,5 +1,10 @@
 #!/usr/bin/python
 
+#### Pending items:
+# * To allocate stride*limit number of elements.
+# * To write allocated elements into a file.
+#
+
 import sys, getopt,re
 
 def usage():
@@ -35,7 +40,9 @@ def main(argv):
 	ConfigParams['size']=[]
 	ConfigParams['stride']=[]
 	ConfigParams['alloc']=[]
-	ConfigParams['datastructure']=[]		
+	ConfigParams['datastructure']=[]	
+	ConfigParams['Dims']=''
+	ConfigParams['NumVars']=''	
 	LineCount=0;
 	DimNotFound=1;
 	SizeNotFound=1;
@@ -56,7 +63,8 @@ def main(argv):
 				DimsLine=re.match(r'\s*\#dims\s*(\d+)*',CurrLine)
 				if DimsLine:
 					Dims=int(DimsLine.group(1))
-					print "\n\t Number of dims is "+str(Dims)+"\n"	
+					print "\n\t Number of dims is "+str(Dims)+"\n"
+					ConfigParams['Dims']=Dims
 					LineNotProcessed=0
 					DimNotFound=0
 		if NumVarNotFound:
@@ -65,7 +73,8 @@ def main(argv):
 				DimsLine=re.match(r'\s*\#vars\s*(\d+)*',CurrLine)
 				if DimsLine:
 					NumVars=int(DimsLine.group(1))
-					print "\n\t Number of variables is "+str(NumVars)+"\n"	
+					ConfigParams['NumVars']=NumVars
+					print "\n\t Number of variables is "+str(ConfigParams['NumVars'])+"\n"	
 					LineNotProcessed=0
 					NumVarNotFound=0			
 								
@@ -89,8 +98,8 @@ def main(argv):
 								ConfigParams['size'].append( CurrSize)
 								CurrDim+=1				
 								print "\n\t Size for dim "+str(CurrDim)+" is "+str(CurrSize)+"\n" 
-						if(CurrDim != Dims):
-							print "\n\t The size parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(Dims)+"\n";
+						if(CurrDim != ConfigParams['Dims']):
+							print "\n\t The size parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['Dims'])+"\n";
 							sys.exit(0)
 						else:
 							SizeNotFound=0
@@ -114,8 +123,8 @@ def main(argv):
 								ConfigParams['stride'].append( CurrStride);
 								CurrDim+=1				
 								print "\n\t Stride for dim "+str(CurrDim)+" is "+str(CurrStride)+"\n" 
-						if(CurrDim != NumVars):
-							print "\n\t The stride parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(NumVars)+"\n";
+						if(CurrDim != ConfigParams['NumVars']):
+							print "\n\t The stride parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['NumVars'])+"\n";
 							sys.exit(0)
 						else:
 							StrideNotFound=0	
@@ -139,8 +148,8 @@ def main(argv):
 								ConfigParams['alloc'].append(CurrAlloc);
 								CurrDim+=1				
 								print "\n\t Alloc for dim "+str(CurrDim)+" is "+str(CurrAlloc)+"\n" 					
-						if(CurrDim != NumVars):
-							print "\n\t The allocation parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(NumVars)+"\n";
+						if(CurrDim != ConfigParams['NumVars']):
+							print "\n\t The allocation parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['NumVars'])+"\n";
 							sys.exit(0)
 							
 						else:
@@ -164,8 +173,8 @@ def main(argv):
 								ConfigParams['datastructure'].append( CurrDS);
 								CurrDim+=1				
 								print "\n\t Alloc for dim "+str(CurrDim)+" is "+str(CurrDS)+"\n" 					
-						if(CurrDim != NumVars):
-							print "\n\t The data structure parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(NumVars)+"\n";
+						if(CurrDim != ConfigParams['NumVars']):
+							print "\n\t The data structure parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['NumVars'])+"\n";
 							sys.exit(0)
 						else:
 							DSNotFound=0		
@@ -178,18 +187,23 @@ def main(argv):
 	#Tabs: 1		
 	if(~(NumVarNotFound and DimNotFound and SizeNotFound and StrideNotFound and AllocNotFound and DSNotFound)):
 		print "\n\t The config file has all the required info: #dims, size and allocation for all the dimensions"	
+		#SrcFileName='StrideBenchmarks_'+str(ConfigParams
 		InitAlloc=[]
 		indices=[]
-		for i in range(Dims):
+		tmp='#include<stdio.h>'
+		InitAlloc.append(tmp)
+		tmp='#include<stdlib.h>'
+		InitAlloc.append(tmp)		
+		for i in range(ConfigParams['Dims']):
 			indices.append('index'+str(i))
 				
 		tmp=' int '
-		for i in range(Dims-1):
+		for i in range(ConfigParams['Dims']-1):
 			tmp+=indices[i]+','	
 		tmp+=indices[len(indices)-1]+';'
 		print "\n\t This is how the indices will look: "+tmp+" \n";							
 		InitAlloc.append(tmp);			
-		for index in range(NumVars):
+		for index in range(ConfigParams['NumVars']):
 			VarDecl=''
 			if(ConfigParams['datastructure'][index]=='f' or ConfigParams['datastructure'][index]=='float'):
 				VarDecl='float' 
@@ -209,9 +223,9 @@ def main(argv):
 				var=' Var'+str(index)
 				prefix=''
 				suffix=''
-				for CurrDim in range(Dims):
+				for CurrDim in range(ConfigParams['Dims']):
 				   prefix+='*'
-				for CurrDim in range(Dims-1):
+				for CurrDim in range(ConfigParams['Dims']-1):
 				   suffix+='*'				   
 				VarDecl+=prefix+var
 				#print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
@@ -223,9 +237,9 @@ def main(argv):
 				print "\n\t This is how the first malloc statement look: "+str(tmp)+"\n"
 
 				
-				if(Dims>1):
+				if(ConfigParams['Dims']>1):
 					NumForLoops=''
-					for i in range(Dims-1):
+					for i in range(ConfigParams['Dims']-1):
 						NumForLoops=i+1
 						MallocLHS=var
 						for j in range(NumForLoops):
@@ -235,9 +249,9 @@ def main(argv):
 							MallocLHS+='['+str(indices[j])+']'
 						prefix=''
 						suffix=''
-						for CurrDim in range(Dims-i-1):
+						for CurrDim in range(ConfigParams['Dims']-i-1):
 						   prefix+='*'
-						for CurrDim in range(Dims-i-2):
+						for CurrDim in range(ConfigParams['Dims']-i-2):
 						   suffix+='*'	
 
 						MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * sizeof('+datatype+suffix+'))'		
@@ -250,12 +264,20 @@ def main(argv):
 				for CurrDim in range(Dims):
 					VarDecl+='['+str(ConfigParams['size'][CurrDim])+']'
 				print "\n\t Variable declaration for variable "+str(index)+" is static and is as follows: "+str(VarDecl)+"\n"
+				InitAlloc.append(VarDecl)
 	
 			#InitAlloc[index]=[]
-			DynAllocLinesCount=0;
+		DynAllocLinesCount=0;
 		for i in range(len(DynAlloc)):
 			DynAllocLinesCount+=1
 			print "\n\t Line: "+str(DynAllocLinesCount)+" contents: "+str(DynAlloc[i])
+		
+		InitAllocLinesCount=0;
+		for i in range(len(InitAlloc)):
+			InitAllocLinesCount+=1
+			print "\n\t Line: "+str(InitAllocLinesCount)+" contents: "+str(InitAlloc[i])
+			
+						
 	else:
 		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "		
 			
