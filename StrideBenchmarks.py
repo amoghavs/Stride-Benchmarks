@@ -7,16 +7,54 @@
 
 import sys, getopt,re,math
 
+
 def usage():
 	print "StrideBenchmarks.py -c/--config file with all the configuration.\n "
 
 
-def StridedLoop(Stride,StrideDim,A,ConfigParams):
+def InitVar(A,VarNum,ConfigParams,debug):
+
+	ThisLoop=[]
+	tmp=' This is the variable I am using: '+str(A)
+	NumForLoops=ConfigParams['Dims']
+    	LHSindices=''
+    	RHSindices=''
+    
+
+    	for j in range(NumForLoops):
+		ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+		
+		TabSpace='\t'
+		for k in range(j):
+			TabSpace+='\t'
+		ThisForLoop=TabSpace+ThisForLoop
+		ThisLoop.append(ThisForLoop)
+		ThisLoop.append(TabSpace+'{')
+		#print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
+		LHSindices+='['+str(ConfigParams['indices'][j])+']'
+
+    	TabSpace=''
+    	for k in range(NumForLoops):
+		TabSpace+='\t'
+    	eqn="\t"+TabSpace+str(A)+LHSindices+' = '+str(ConfigParams['init'][VarNum])+';'
+    	#print "\n So, the equation is: "+str(eqn)	
+	ThisLoop.append(eqn)
+    	for k in range(NumForLoops):
+    		TabSpace='' #\t'
+    		for l in range(NumForLoops-k):
+    			TabSpace+="\t"
+	    	ThisLoop.append(TabSpace+'}')
+     
+	return ThisLoop
+
+
+def StridedLoop(Stride,StrideDim,A,ConfigParams,debug):
     if( (StrideDim > ConfigParams['Dims']) or (StrideDim < 0) ):
       print "\n\t ERROR: For variaable "+str(A)+" a loop with stride access: "+str(StrideDim)+" has been requested, which is illegal!"
       sys.exit(0)
 
-    print "\n\t In StrideLoop: Variable: "+str(A)+" dimension: "+str(StrideDim)+" and requested stride is "+str(Stride)
+    if debug:	
+	    print "\n\t In StrideLoop: Variable: "+str(A)+" dimension: "+str(StrideDim)+" and requested stride is "+str(Stride)
     ThisLoop=[]
     ThisLoop.append('Sum=2;')
     tmp=' This is the variable I am using: '+str(A)
@@ -31,9 +69,9 @@ def StridedLoop(Stride,StrideDim,A,ConfigParams):
 			RHSindices+='['+str(ConfigParams['indices'][j])+' +'+str(Stride)+' ]'
 			#RHSindices+='['+str(ConfigParams['indices'][j])+' ]'
 			if(Stride>1):
-				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+= '+str(Stride)+')'
+				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' - '+str(Stride)+' ; '+str(ConfigParams['indices'][j])+'+= '+str(Stride)+')'
 			else:
-				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' - '+str(Stride)+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 			
 			#print "\n\t Boo yeah: "+str(StrideDim)+ThisForLoop+ "\n"
 		elif(j!=StrideDim):
@@ -74,8 +112,9 @@ def WriteArray(Array,File):
 
 def main(argv):
 	config=''
+	debug=0
 	try:
-	   opts, args = getopt.getopt(sys.argv[1:],"c:h:v",["config","help","verbose"])
+	   opts, args = getopt.getopt(sys.argv[1:],"c:d:h:v",["config","deubg","help","verbose"])
 	except getopt.GetoptError:
 		#print str(err) # will print something like "option -a not recognized"
 	   usage()
@@ -88,6 +127,9 @@ def main(argv):
 	   elif opt in ("-c", "--config"):
 	      config=arg
 	      print "\n\t Config file is "+str(config)+"\n";
+	   elif opt in ("-d", "--debug"):
+	      debug=int(arg)
+	      print "\n\t Debug option is "+str(debug)+"\n";	      
            else:
    		usage()
 
@@ -103,13 +145,15 @@ def main(argv):
 	ConfigParams['alloc']=[]
 	ConfigParams['datastructure']=[]	
 	ConfigParams['Dims']=''
-	ConfigParams['NumVars']=''	
+	ConfigParams['NumVars']=''
+	ConfigParams['init']=[]	
 	LineCount=0;
 	DimNotFound=1;
 	SizeNotFound=1;
 	StrideNotFound=1;
 	AllocNotFound=1;
 	DSNotFound=1;
+	InitNotFound=1;
 	ThisArray=[]
 	NumVars=0
 	NumVarNotFound=1
@@ -124,7 +168,8 @@ def main(argv):
 				DimsLine=re.match(r'\s*\#dims\s*(\d+)*',CurrLine)
 				if DimsLine:
 					Dims=int(DimsLine.group(1))
-					print "\n\t Number of dims is "+str(Dims)+"\n"
+					if debug:
+						print "\n\t Number of dims is "+str(Dims)+"\n"
 					ConfigParams['Dims']=Dims
 					LineNotProcessed=0
 					DimNotFound=0
@@ -135,7 +180,8 @@ def main(argv):
 				if DimsLine:
 					NumVars=int(DimsLine.group(1))
 					ConfigParams['NumVars']=NumVars
-					print "\n\t Number of variables is "+str(ConfigParams['NumVars'])+"\n"	
+					if debug:
+						print "\n\t Number of variables is "+str(ConfigParams['NumVars'])+"\n"	
 					LineNotProcessed=0
 					NumVarNotFound=0			
 								
@@ -151,16 +197,19 @@ def main(argv):
 						for CurrSize in Sizes:
 							CheckSpace=re.match(r'^\s*$',CurrSize)
 						        if(CheckSpace):
-						       		print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
+						       		if debug:
+						       			print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
 						       		sys.exit(0)
 						       	else:
 								CurrSize=re.sub(r'^\s*','',CurrSize)
 								CurrSize=re.sub(r'\s*$','',CurrSize)						       	
 								ConfigParams['size'].append( CurrSize)
 								CurrDim+=1				
-								print "\n\t Size for dim "+str(CurrDim)+" is "+str(CurrSize)+"\n" 
+								if debug:
+						       			print "\n\t Size for dim "+str(CurrDim)+" is "+str(CurrSize)+"\n" 
 						if(CurrDim != ConfigParams['Dims']):
-							print "\n\t The size parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['Dims'])+"\n";
+							if debug:
+								print "\n\t The size parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['Dims'])+"\n";
 							sys.exit(0)
 						else:
 							SizeNotFound=0
@@ -176,14 +225,16 @@ def main(argv):
 						for CurrStride in Strides:
 							CheckSpace=re.match(r'^\s*$',CurrStride)
 						        if(CheckSpace):
-						       		print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
+						       		if debug:
+						       			print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
 						       		sys.exit(0)						
 							else:
 								CurrStride=re.sub(r'^\s*','',CurrStride)
 								CurrStride=re.sub(r'\s*$','',CurrStride)							
 								ConfigParams['stride'].append( CurrStride);
 								CurrDim+=1				
-								print "\n\t Stride for dim "+str(CurrDim)+" is "+str(CurrStride)+"\n" 
+								if debug:
+						       			print "\n\t Stride for dim "+str(CurrDim)+" is "+str(CurrStride)+"\n" 
 						if(CurrDim != ConfigParams['NumVars']):
 							print "\n\t The stride parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['NumVars'])+"\n";
 							sys.exit(0)
@@ -201,14 +252,16 @@ def main(argv):
 						for CurrAlloc in Allocs:
 							CheckSpace=re.match(r'^\s*$',CurrAlloc)
 						        if(CheckSpace):
-						       		print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
+						       		if debug:
+						       			print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
 						       		sys.exit(0)						
 							else:	
 								CurrAlloc=re.sub(r'^\s*','',CurrAlloc)
 								CurrAlloc=re.sub(r'\s*$','',CurrAlloc)					
 								ConfigParams['alloc'].append(CurrAlloc);
 								CurrDim+=1				
-								print "\n\t Alloc for dim "+str(CurrDim)+" is "+str(CurrAlloc)+"\n" 					
+								if debug:
+						       			print "\n\t Alloc for dim "+str(CurrDim)+" is "+str(CurrAlloc)+"\n" 					
 						if(CurrDim != ConfigParams['NumVars']):
 							print "\n\t The allocation parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['NumVars'])+"\n";
 							sys.exit(0)
@@ -227,27 +280,58 @@ def main(argv):
 						for CurrDS in DS:
 							CheckSpace=re.match(r'^\s*$',CurrDS)
 						        if(CheckSpace):
-						       		print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
+						       		if debug:
+						       			print "\n\t For datastructure parameter, the input is not in the appropriate format. Please check! \n"
 						       		sys.exit(0)						
 							else:
 								CurrDS=re.sub(r'\s*$','',CurrDS)
 								ConfigParams['datastructure'].append( CurrDS);
 								CurrDim+=1				
-								print "\n\t Alloc for dim "+str(CurrDim)+" is "+str(CurrDS)+"\n" 					
+								if debug:
+						       			print "\n\t Alloc for dim "+str(CurrDim)+" is "+str(CurrDS)+"\n" 					
 						if(CurrDim != ConfigParams['NumVars']):
 							print "\n\t The data structure parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['NumVars'])+"\n";
 							sys.exit(0)
 						else:
 							DSNotFound=0		
 
+			if InitNotFound:
+				MatchObj=re.match(r'\s*\#init',CurrLine)
+				if MatchObj:
+					tmp=re.split(' ',CurrLine)
+					Init=re.split(',',tmp[1])
+					if Init:
+						LineNotProcessed=0
+						CurrDim=0;
+						for CurrInit in Init:
+							CheckSpace=re.match(r'^\s*$',CurrInit)
+						        if(CheckSpace):
+						       		if debug:
+						       			print "\n\t For init parameter, the input is not in the appropriate format. Please check! \n"
+						       		sys.exit(0)						
+							else:
+								CurrInit=re.sub(r'\s*$','',CurrInit)
+								ConfigParams['init'].append( CurrInit);
+								CurrDim+=1				
+								if debug:
+						       			print "\n\t Alloc for dim "+str(CurrDim)+" is "+str(CurrInit)+"\n" 					
+						if(CurrDim != ConfigParams['NumVars']):
+							print "\n\t The data structure parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['NumVars'])+"\n";
+							sys.exit(0)
+						else:
+							InitNotFound=0		
+
+
+
 
 		if LineNotProcessed:
-			print "\n\t Info is not processed in line: "+str(LineCount)+"\n";
+			if debug:
+				print "\n\t Info is not processed in line: "+str(LineCount)+"\n";
 		
 		
 	#Tabs: 1		
-	if(~(NumVarNotFound and DimNotFound and SizeNotFound and StrideNotFound and AllocNotFound and DSNotFound)):
-		print "\n\t The config file has all the required info: #dims, size and allocation for all the dimensions"	
+	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0)):
+		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions and InitNotFound is"+str(~InitNotFound)	
 
 		InitAlloc=[]
 		ConfigParams['indices']=[]
@@ -265,19 +349,23 @@ def main(argv):
 		for i in range(ConfigParams['Dims']-1):
 			tmp+=ConfigParams['indices'][i]+','	
 		tmp+=ConfigParams['indices'][len(ConfigParams['indices'])-1]+';'
-		print "\n\t This is how the indices will look: "+tmp+" \n";							
+		if debug:
+			print "\n\t This is how the indices will look: "+tmp+" \n";							
 		InitAlloc.append(tmp);			
 		for index in range(ConfigParams['NumVars']):
 			VarDecl=''
 			if(ConfigParams['datastructure'][index]=='f' or ConfigParams['datastructure'][index]=='float'):
 				VarDecl='float' 
-				print "\n\t Allocated float to variable "+str(index)
+				if debug:
+					print "\n\t Allocated float to variable "+str(index)
 			elif(ConfigParams['datastructure'][index]=='d' or ConfigParams['datastructure'][index]=='double'):
 				VarDecl='double' 
-				print "\n\t Allocated double to variable "+str(index)				
+				if debug:
+					print "\n\t Allocated double to variable "+str(index)				
 			elif(ConfigParams['datastructure'][index]=='i' or ConfigParams['datastructure'][index]=='integer'):
 				VarDecl='int' 
-				print "\n\t Allocated integer to variable "+str(index)								
+				if debug:
+					print "\n\t Allocated integer to variable "+str(index)								
 			else:
 				print "\n\t Supported datastructure is only float, double, integer. Dimension "+str(index)+" requests one of the nonsupported datastructure: "+str(ConfigParams['datastructure'][index])+"\n"
 				sys.exit(0)
@@ -292,14 +380,16 @@ def main(argv):
 				for CurrDim in range(ConfigParams['Dims']-1):
 				   suffix+='*'				   
 				VarDecl+=prefix+var+';'
-				#print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
+				if debug:
+					print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
 				DynAlloc=[]
 				DynAlloc.append(VarDecl)
 				#if(Dims>1):
 				tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
 				DynAlloc.append(tmp);
 				  		
-				print "\n\t This is how the first malloc statement look: "+str(tmp)+"\n"
+				if debug:
+					print "\n\t This is how the first malloc statement look: "+str(tmp)+"\n"
 
 				
 				if(ConfigParams['Dims']>1):
@@ -309,7 +399,8 @@ def main(argv):
 						MallocLHS=var
 						for j in range(NumForLoops):
 							ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
-							print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
+							if debug:
+								print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
 							DynAlloc.append(ThisForLoop);
 							MallocLHS+='['+str(ConfigParams['indices'][j])+']'
 						prefix=''
@@ -321,7 +412,8 @@ def main(argv):
 
 						MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
 						DynAlloc.append(MallocEqn)
-				   		print "\t The malloc equation is: "+str(MallocEqn)+"\n"
+				   		if debug:
+							print "\t The malloc equation is: "+str(MallocEqn)+"\n"
 				
 				
 			else:
@@ -329,7 +421,8 @@ def main(argv):
 				for CurrDim in range(Dims):
 					VarDecl+='['+str(ConfigParams['size'][CurrDim])+']'
 				VarDecl+=';'
-				print "\n\t Variable declaration for variable "+str(index)+" is static and is as follows: "+str(VarDecl)+"\n"
+				if debug:
+					print "\n\t Variable declaration for variable "+str(index)+" is static and is as follows: "+str(VarDecl)+"\n"
 				InitAlloc.append(VarDecl)
 	
 			#InitAlloc[index]=[]
@@ -357,8 +450,12 @@ def main(argv):
 	else:
 		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "		
 	
-	WriteFile.write("\n\t int Sum=0;")		
-	ThisLoop=StridedLoop(0,2,'Var1',ConfigParams)
+	WriteFile.write("\n\t int Sum=0;")	
+	ThisLoop=InitVar('Var0',0,ConfigParams,debug)	
+	WriteArray(ThisLoop,WriteFile)	
+	ThisLoop=InitVar('Var1',1,ConfigParams,debug)			
+	WriteArray(ThisLoop,WriteFile)		
+	ThisLoop=StridedLoop(0,2,'Var1',ConfigParams,debug)
 	
 	WriteArray(ThisLoop,WriteFile)	
 
@@ -372,12 +469,12 @@ def main(argv):
 				if(CurrStride==0 or CurrStride==1):
 					UseStride=CurrStride
 					WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )				
-					ThisLoop=StridedLoop(UseStride,CurrDim,CurrVar,ConfigParams)
+					ThisLoop=StridedLoop(UseStride,CurrDim,CurrVar,ConfigParams,debug)
 					WriteArray(ThisLoop,WriteFile)	
 				else:
 					UseStride=2**(CurrStride-1)
 					WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )
-					ThisLoop=StridedLoop(UseStride,CurrDim,CurrVar,ConfigParams)
+					ThisLoop=StridedLoop(UseStride,CurrDim,CurrVar,ConfigParams,debug)
 					WriteArray(ThisLoop,WriteFile)				
 		
 		
