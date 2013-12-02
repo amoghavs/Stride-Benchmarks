@@ -5,7 +5,7 @@
 # * To write allocated elements into a file. - Done
 #
 
-import sys, getopt,re
+import sys, getopt,re,math
 
 def usage():
 	print "StrideBenchmarks.py -c/--config file with all the configuration.\n "
@@ -16,8 +16,9 @@ def StridedLoop(Stride,StrideDim,A,ConfigParams):
       print "\n\t ERROR: For variaable "+str(A)+" a loop with stride access: "+str(StrideDim)+" has been requested, which is illegal!"
       sys.exit(0)
 
+    print "\n\t In StrideLoop: Variable: "+str(A)+" dimension: "+str(StrideDim)+" and requested stride is "+str(Stride)
     ThisLoop=[]
-    ThisLoop.append('Sum=0;')
+    ThisLoop.append('Sum=2;')
     tmp=' This is the variable I am using: '+str(A)
     NumForLoops=ConfigParams['Dims']
     LHSindices=''
@@ -27,13 +28,14 @@ def StridedLoop(Stride,StrideDim,A,ConfigParams):
     for j in range(NumForLoops):
 
 		if(j==StrideDim):
-			RHSindices+='['+str(ConfigParams['indices'][j])+' +'+str(StrideDim)+' ]'
-			if(StrideDim>1):
-				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+= '+str(StrideDim)+')'
+			RHSindices+='['+str(ConfigParams['indices'][j])+' +'+str(Stride)+' ]'
+			#RHSindices+='['+str(ConfigParams['indices'][j])+' ]'
+			if(Stride>1):
+				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+= '+str(Stride)+')'
 			else:
 				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 			
-			print "\n\t Boo yeah: "+str(StrideDim)+ThisForLoop+ "\n"
+			#print "\n\t Boo yeah: "+str(StrideDim)+ThisForLoop+ "\n"
 		elif(j!=StrideDim):
 			RHSindices+='['+str(ConfigParams['indices'][j])+']'	
 			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
@@ -44,14 +46,14 @@ def StridedLoop(Stride,StrideDim,A,ConfigParams):
 		ThisForLoop=TabSpace+ThisForLoop
 		ThisLoop.append(ThisForLoop)
 		ThisLoop.append(TabSpace+'{')
-		print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
+		#print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
 		LHSindices+='['+str(ConfigParams['indices'][j])+']'
 
     TabSpace=''
     for k in range(NumForLoops):
 		TabSpace+='\t'
-    eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum+'+str(A)+' + '+str(A)+RHSindices+';'
-    print "\n So, the equation is: "+str(eqn)	
+    eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
+    #print "\n So, the equation is: "+str(eqn)	
     ThisLoop.append(eqn)
     for k in range(NumForLoops):
     	TabSpace='' #\t'
@@ -342,50 +344,42 @@ def main(argv):
 		SrcFileName='StrideBenchmarks_'+str(ConfigParams['NumVars'])+"vars_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_'+str(StrideString)+'stride.c'
 		
 		print "\n\t Source file name: "+str(SrcFileName)+"\n"		
-		f=open(SrcFileName,'w')			
+		WriteFile=open(SrcFileName,'w')			
 
-		WriteArray(InitAlloc,f)
-		WriteArray(DynAlloc,f)
-		#InitAllocLinesCount=0;
-		#for i in range(len(InitAlloc)):
-		#	InitAllocLinesCount+=1
-		#	print "\n\t Line: "+str(InitAllocLinesCount)+" contents: "+str(InitAlloc[i])
-		#	f.write("\n\t "+str(InitAlloc[i]))
+		WriteArray(InitAlloc,WriteFile)
+		WriteArray(DynAlloc,WriteFile)
 
-		#f.write("\n\n")	
-		#DynAllocLinesCount=0;
-		#for i in range(len(DynAlloc)):
-		#	DynAllocLinesCount+=1
-		#	print "\n\t Line: "+str(DynAllocLinesCount)+" contents: "+str(DynAlloc[i])
-		#	f.write("\n\t "+str(DynAlloc[i])+"\n")
-		
-		#f.close()
 						
 	else:
 		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "		
 			
-		
 	ThisLoop=StridedLoop(0,2,'Var1',ConfigParams)
 	
-	WriteArray(ThisLoop,f)	
-	# PENDING: Writing to a file can be shifted into a routine!	
-	#f.write("\n\n")
-	#ThisLoopAllocLinesCount=0
-	#for i in range(len(ThisLoop)):
-	#	ThisLoopAllocLinesCount+=1
-	#	f.write("\n\t "+str(ThisLoop[i])+"\n")
+	WriteArray(ThisLoop,WriteFile)	
+
+	
+	for VarNum in range(ConfigParams['NumVars']):
+		CurrVar='Var'+str(VarNum+1)
+		StrideRange=int(math.log(float(ConfigParams['stride'][VarNum]),2))+2		
+			#print "\n\t StrideRange: "+str(StrideRange)
+		for CurrDim in range(ConfigParams['Dims']):
+			for CurrStride in range(StrideRange):
+				if(CurrStride==0 or CurrStride==1):
+					UseStride=CurrStride
+					WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )				
+					ThisLoop=StridedLoop(UseStride,CurrDim,CurrVar,ConfigParams)
+					WriteArray(ThisLoop,WriteFile)	
+				else:
+					UseStride=2**(CurrStride-1)
+					WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )
+					ThisLoop=StridedLoop(UseStride,CurrDim,CurrVar,ConfigParams)
+					WriteArray(ThisLoop,WriteFile)				
 		
 		
-	#f.write("\n\n")	
-	f.close()
 		
+	WriteFile.close()		
 		
-		
-		
-		
-		
-		
-		
+	
 		
 					
 
