@@ -22,7 +22,7 @@ def InitVar(A,VarNum,ConfigParams,debug):
     
 
     	for j in range(NumForLoops):
-		ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+		ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['stride'][VarNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 		
 		TabSpace='\t'
 		for k in range(j):
@@ -48,7 +48,7 @@ def InitVar(A,VarNum,ConfigParams,debug):
 	return ThisLoop
 
 
-def StridedLoop(Stride,StrideDim,A,ConfigParams,debug):
+def StridedLoop(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     if( (StrideDim > ConfigParams['Dims']) or (StrideDim < 0) ):
       print "\n\t ERROR: For variaable "+str(A)+" a loop with stride access: "+str(StrideDim)+" has been requested, which is illegal!"
       sys.exit(0)
@@ -69,14 +69,14 @@ def StridedLoop(Stride,StrideDim,A,ConfigParams,debug):
 			RHSindices+='['+str(ConfigParams['indices'][j])+' +'+str(Stride)+' ]'
 			#RHSindices+='['+str(ConfigParams['indices'][j])+' ]'
 			if(Stride>1):
-				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' - '+str(Stride)+' ; '+str(ConfigParams['indices'][j])+'+= '+str(Stride)+')'
+				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 , AnotherIndex=0 ; '+	str(ConfigParams['indices'][j])+' < '+'( ('+str(ConfigParams['size'][j])+' * '+str(ConfigParams['stride'][VarNum])+') - '+str(Stride) + ') && AnotherIndex < ' +str(ConfigParams['size'][j]) + ' ; ' +str(ConfigParams['indices'][j])+'+= '+str(Stride)+', AnotherIndex++ )'
 			else:
-				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' - '+str(Stride)+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 , AnotherIndex=0 ; '+	str(ConfigParams['indices'][j])+' < '+'( ('+str(ConfigParams['size'][j])+' * '+str(ConfigParams['stride'][VarNum])+') - '+str(Stride) + ') && AnotherIndex < ' +str(ConfigParams['size'][j]) + ' ; ' +str(ConfigParams['indices'][j])+'+= 1'+', AnotherIndex++ )'
 			
 			#print "\n\t Boo yeah: "+str(StrideDim)+ThisForLoop+ "\n"
 		elif(j!=StrideDim):
 			RHSindices+='['+str(ConfigParams['indices'][j])+']'	
-			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+'('+str(ConfigParams['size'][j])+' * '+str(ConfigParams['stride'][VarNum])+') - '+str(Stride)+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 		
 		TabSpace='\t'
 		for k in range(j):
@@ -351,7 +351,8 @@ def main(argv):
 		tmp+=ConfigParams['indices'][len(ConfigParams['indices'])-1]+';'
 		if debug:
 			print "\n\t This is how the indices will look: "+tmp+" \n";							
-		InitAlloc.append(tmp);			
+		InitAlloc.append(tmp);	
+		DynAlloc=[]		
 		for index in range(ConfigParams['NumVars']):
 			VarDecl=''
 			if(ConfigParams['datastructure'][index]=='f' or ConfigParams['datastructure'][index]=='float'):
@@ -369,7 +370,7 @@ def main(argv):
 			else:
 				print "\n\t Supported datastructure is only float, double, integer. Dimension "+str(index)+" requests one of the nonsupported datastructure: "+str(ConfigParams['datastructure'][index])+"\n"
 				sys.exit(0)
-			DynAlloc=[]	
+				
 			if( ConfigParams['alloc'][index]=='d' or ConfigParams['alloc'][index]=='dynamic'):
 				datatype=VarDecl
 				var=' Var'+str(index)
@@ -396,7 +397,7 @@ def main(argv):
 						NumForLoops=i+1
 						MallocLHS=var
 						for j in range(NumForLoops):
-							ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+							ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['stride'][index])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 							if debug:
 								print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
 							DynAlloc.append(ThisForLoop);
@@ -408,7 +409,7 @@ def main(argv):
 						for CurrDim in range(ConfigParams['Dims']-i-2):
 						   suffix+='*'	
 
-						MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
+						MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
 						DynAlloc.append(MallocEqn)
 				   		if debug:
 							print "\t The malloc equation is: "+str(MallocEqn)+"\n"
@@ -417,7 +418,7 @@ def main(argv):
 			else:
 				VarDecl+=' Var'+str(index)
 				for CurrDim in range(Dims):
-					VarDecl+='['+str(ConfigParams['size'][CurrDim])+']'
+					VarDecl+='['+str(ConfigParams['size'][CurrDim])+' * '+str(ConfigParams['stride'][index])+']'
 				VarDecl+=';'
 				if debug:
 					print "\n\t Variable declaration for variable "+str(index)+" is static and is as follows: "+str(VarDecl)+"\n"
@@ -451,29 +452,30 @@ def main(argv):
 	else:
 		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "		
 	
-	WriteFile.write("\n\t int Sum=0;")
+	WriteFile.write("\n\t int Sum=0,AnotherIndex=0;")
 	for VarNum in range(ConfigParams['NumVars']):
 		CurrVar='Var'+str(VarNum)		
 		ThisLoop=InitVar(CurrVar,VarNum,ConfigParams,debug)	
 		WriteArray(ThisLoop,WriteFile)	
- 
+ 	
 	
 	for VarNum in range(ConfigParams['NumVars']):
 		CurrVar='Var'+str(VarNum)
 		StrideRange=int(math.log(float(ConfigParams['stride'][VarNum]),2))+2		
 			#print "\n\t StrideRange: "+str(StrideRange)
-		for CurrDim in range(ConfigParams['Dims']):
-			for CurrStride in range(StrideRange):
-				if(CurrStride==0 or CurrStride==1):
-					UseStride=CurrStride
-					WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )				
-					ThisLoop=StridedLoop(UseStride,CurrDim,CurrVar,ConfigParams,debug)
-					WriteArray(ThisLoop,WriteFile)	
-				else:
-					UseStride=2**(CurrStride-1)
-					WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )
-					ThisLoop=StridedLoop(UseStride,CurrDim,CurrVar,ConfigParams,debug)
-					WriteArray(ThisLoop,WriteFile)				
+		#for CurrDim in range(ConfigParams['Dims']):
+		CurrDim=ConfigParams['Dims']-1
+		for CurrStride in range(StrideRange):
+			if(CurrStride==0 or CurrStride==1):
+				UseStride=CurrStride
+				WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )				
+				ThisLoop=StridedLoop(UseStride,CurrDim,CurrVar,VarNum,ConfigParams,debug)
+				WriteArray(ThisLoop,WriteFile)	
+			else:
+				UseStride=2**(CurrStride-1)
+				WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )
+				ThisLoop=StridedLoop(UseStride,CurrDim,CurrVar,VarNum, ConfigParams,debug)
+				WriteArray(ThisLoop,WriteFile)				
 		
 		
 		

@@ -1,7 +1,7 @@
 #vars 2
 #dims 3
-#stride 4,4
-#size 100,100,100
+#stride 2,2
+#size 10,2,2
 #allocation d,s
 #init index0*2,index1*3
 #datastructure f,f
