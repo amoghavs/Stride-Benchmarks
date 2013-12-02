@@ -254,7 +254,10 @@ def main(argv):
 		tmp='#include<stdio.h>'
 		InitAlloc.append(tmp)
 		tmp='#include<stdlib.h>'
-		InitAlloc.append(tmp)		
+		InitAlloc.append(tmp)	
+		tmp='int main()'	
+		InitAlloc.append(tmp)
+		InitAlloc.append('\n\t{')				
 		for i in range(ConfigParams['Dims']):
 			ConfigParams['indices'].append('index'+str(i))
 				
@@ -288,11 +291,12 @@ def main(argv):
 				   prefix+='*'
 				for CurrDim in range(ConfigParams['Dims']-1):
 				   suffix+='*'				   
-				VarDecl+=prefix+var
+				VarDecl+=prefix+var+';'
 				#print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
 				DynAlloc=[]
+				DynAlloc.append(VarDecl)
 				#if(Dims>1):
-				tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'		
+				tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
 				DynAlloc.append(tmp);
 				  		
 				print "\n\t This is how the first malloc statement look: "+str(tmp)+"\n"
@@ -315,7 +319,7 @@ def main(argv):
 						for CurrDim in range(ConfigParams['Dims']-i-2):
 						   suffix+='*'	
 
-						MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'		
+						MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
 						DynAlloc.append(MallocEqn)
 				   		print "\t The malloc equation is: "+str(MallocEqn)+"\n"
 				
@@ -352,14 +356,15 @@ def main(argv):
 						
 	else:
 		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "		
-			
+	
+	WriteFile.write("\n\t int Sum=0;")		
 	ThisLoop=StridedLoop(0,2,'Var1',ConfigParams)
 	
 	WriteArray(ThisLoop,WriteFile)	
 
 	
 	for VarNum in range(ConfigParams['NumVars']):
-		CurrVar='Var'+str(VarNum+1)
+		CurrVar='Var'+str(VarNum)
 		StrideRange=int(math.log(float(ConfigParams['stride'][VarNum]),2))+2		
 			#print "\n\t StrideRange: "+str(StrideRange)
 		for CurrDim in range(ConfigParams['Dims']):
@@ -377,6 +382,8 @@ def main(argv):
 		
 		
 		
+	WriteFile.write("\n\t return 0;")
+	WriteFile.write("\n\t}")
 	WriteFile.close()		
 		
 	
