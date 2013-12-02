@@ -369,7 +369,7 @@ def main(argv):
 			else:
 				print "\n\t Supported datastructure is only float, double, integer. Dimension "+str(index)+" requests one of the nonsupported datastructure: "+str(ConfigParams['datastructure'][index])+"\n"
 				sys.exit(0)
-				
+			DynAlloc=[]	
 			if( ConfigParams['alloc'][index]=='d' or ConfigParams['alloc'][index]=='dynamic'):
 				datatype=VarDecl
 				var=' Var'+str(index)
@@ -382,7 +382,6 @@ def main(argv):
 				VarDecl+=prefix+var+';'
 				if debug:
 					print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
-				DynAlloc=[]
 				DynAlloc.append(VarDecl)
 				#if(Dims>1):
 				tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
@@ -390,7 +389,6 @@ def main(argv):
 				  		
 				if debug:
 					print "\n\t This is how the first malloc statement look: "+str(tmp)+"\n"
-
 				
 				if(ConfigParams['Dims']>1):
 					NumForLoops=''
@@ -437,8 +435,11 @@ def main(argv):
 		for i in range(ConfigParams['NumVars']-1):
 			StrideString+=str(ConfigParams['stride'][i])+'_'
 		StrideString+=str(ConfigParams['stride'][ConfigParams['NumVars']-1])
-			
-		SrcFileName='StrideBenchmarks_'+str(ConfigParams['NumVars'])+"vars_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_'+str(StrideString)+'stride.c'
+		alloc_str=''
+		for CurrAlloc in ConfigParams['alloc']:
+			alloc_str+=str(CurrAlloc)
+					
+		SrcFileName='StrideBenchmarks_'+str(ConfigParams['NumVars'])+"vars_"+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_'+str(StrideString)+'stride.c'
 		
 		print "\n\t Source file name: "+str(SrcFileName)+"\n"		
 		WriteFile=open(SrcFileName,'w')			
@@ -450,15 +451,12 @@ def main(argv):
 	else:
 		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "		
 	
-	WriteFile.write("\n\t int Sum=0;")	
-	ThisLoop=InitVar('Var0',0,ConfigParams,debug)	
-	WriteArray(ThisLoop,WriteFile)	
-	ThisLoop=InitVar('Var1',1,ConfigParams,debug)			
-	WriteArray(ThisLoop,WriteFile)		
-	ThisLoop=StridedLoop(0,2,'Var1',ConfigParams,debug)
-	
-	WriteArray(ThisLoop,WriteFile)	
-
+	WriteFile.write("\n\t int Sum=0;")
+	for VarNum in range(ConfigParams['NumVars']):
+		CurrVar='Var'+str(VarNum)		
+		ThisLoop=InitVar(CurrVar,VarNum,ConfigParams,debug)	
+		WriteArray(ThisLoop,WriteFile)	
+ 
 	
 	for VarNum in range(ConfigParams['NumVars']):
 		CurrVar='Var'+str(VarNum)
