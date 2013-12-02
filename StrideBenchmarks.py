@@ -62,6 +62,14 @@ def StridedLoop(Stride,StrideDim,A,ConfigParams):
     
     return ThisLoop
 
+def WriteArray(Array,File):
+	File.write("\n\n")
+	for i in range(len(Array)):
+		File.write("\n\t "+str(Array[i])+"\n")
+		
+	File.write("\n")	
+
+
 def main(argv):
 	config=''
 	try:
@@ -314,6 +322,7 @@ def main(argv):
 				VarDecl+=' Var'+str(index)
 				for CurrDim in range(Dims):
 					VarDecl+='['+str(ConfigParams['size'][CurrDim])+']'
+				VarDecl+=';'
 				print "\n\t Variable declaration for variable "+str(index)+" is static and is as follows: "+str(VarDecl)+"\n"
 				InitAlloc.append(VarDecl)
 	
@@ -335,19 +344,20 @@ def main(argv):
 		print "\n\t Source file name: "+str(SrcFileName)+"\n"		
 		f=open(SrcFileName,'w')			
 
+		WriteArray(InitAlloc,f)
+		WriteArray(DynAlloc,f)
+		#InitAllocLinesCount=0;
+		#for i in range(len(InitAlloc)):
+		#	InitAllocLinesCount+=1
+		#	print "\n\t Line: "+str(InitAllocLinesCount)+" contents: "+str(InitAlloc[i])
+		#	f.write("\n\t "+str(InitAlloc[i]))
 
-		InitAllocLinesCount=0;
-		for i in range(len(InitAlloc)):
-			InitAllocLinesCount+=1
-			print "\n\t Line: "+str(InitAllocLinesCount)+" contents: "+str(InitAlloc[i])
-			f.write("\n\t "+str(InitAlloc[i]))
-
-		f.write("\n\n")	
-		DynAllocLinesCount=0;
-		for i in range(len(DynAlloc)):
-			DynAllocLinesCount+=1
-			print "\n\t Line: "+str(DynAllocLinesCount)+" contents: "+str(DynAlloc[i])
-			f.write("\n\t "+str(DynAlloc[i])+"\n")
+		#f.write("\n\n")	
+		#DynAllocLinesCount=0;
+		#for i in range(len(DynAlloc)):
+		#	DynAllocLinesCount+=1
+		#	print "\n\t Line: "+str(DynAllocLinesCount)+" contents: "+str(DynAlloc[i])
+		#	f.write("\n\t "+str(DynAlloc[i])+"\n")
 		
 		#f.close()
 						
@@ -356,16 +366,17 @@ def main(argv):
 			
 		
 	ThisLoop=StridedLoop(0,2,'Var1',ConfigParams)
-		
+	
+	WriteArray(ThisLoop,f)	
 	# PENDING: Writing to a file can be shifted into a routine!	
-	f.write("\n\n")
-	ThisLoopAllocLinesCount=0
-	for i in range(len(ThisLoop)):
-		ThisLoopAllocLinesCount+=1
-		f.write("\n\t "+str(ThisLoop[i])+"\n")
+	#f.write("\n\n")
+	#ThisLoopAllocLinesCount=0
+	#for i in range(len(ThisLoop)):
+	#	ThisLoopAllocLinesCount+=1
+	#	f.write("\n\t "+str(ThisLoop[i])+"\n")
 		
 		
-	f.write("\n\n")	
+	#f.write("\n\n")	
 	f.close()
 		
 		
