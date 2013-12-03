@@ -22,7 +22,10 @@ def InitVar(A,VarNum,ConfigParams,debug):
     
 
     	for j in range(NumForLoops):
-		ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['stride'][VarNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+    		if(j==NumForLoops-1):
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['stride'][VarNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+		else:
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'		
 		
 		TabSpace='\t'
 		for k in range(j):
@@ -76,7 +79,7 @@ def StridedLoop(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 			#print "\n\t Boo yeah: "+str(StrideDim)+ThisForLoop+ "\n"
 		elif(j!=StrideDim):
 			RHSindices+='['+str(ConfigParams['indices'][j])+']'	
-			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+'('+str(ConfigParams['size'][j])+' * '+str(ConfigParams['stride'][VarNum])+') - '+str(Stride)+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 		
 		TabSpace='\t'
 		for k in range(j):
@@ -385,7 +388,7 @@ def main(argv):
 					print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
 				DynAlloc.append(VarDecl)
 				#if(Dims>1):
-				tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
+				tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * sizeof('+datatype+suffix+'))'+';'		
 				DynAlloc.append(tmp);
 				  		
 				if debug:
@@ -397,7 +400,7 @@ def main(argv):
 						NumForLoops=i+1
 						MallocLHS=var
 						for j in range(NumForLoops):
-							ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['stride'][index])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+							ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 							if debug:
 								print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
 							DynAlloc.append(ThisForLoop);
@@ -408,8 +411,10 @@ def main(argv):
 						   prefix+='*'
 						for CurrDim in range(ConfigParams['Dims']-i-2):
 						   suffix+='*'	
-
-						MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
+						if(i==(ConfigParams['Dims']-2)): # Since the loop is going from 0 to ConfigParams['Dims']-2
+							MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
+						else:
+							MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * sizeof('+datatype+suffix+'))'+';'		
 						DynAlloc.append(MallocEqn)
 				   		if debug:
 							print "\t The malloc equation is: "+str(MallocEqn)+"\n"
@@ -417,8 +422,9 @@ def main(argv):
 				
 			else:
 				VarDecl+=' Var'+str(index)
-				for CurrDim in range(Dims):
-					VarDecl+='['+str(ConfigParams['size'][CurrDim])+' * '+str(ConfigParams['stride'][index])+']'
+				for CurrDim in range(Dims-1):
+					VarDecl+='['+str(ConfigParams['size'][CurrDim])+']'
+				VarDecl+='['+str(ConfigParams['size'][ConfigParams['Dims']-1])+' * '+str(ConfigParams['stride'][index])+']'
 				VarDecl+=';'
 				if debug:
 					print "\n\t Variable declaration for variable "+str(index)+" is static and is as follows: "+str(VarDecl)+"\n"
