@@ -387,8 +387,11 @@ def main(argv):
 				if debug:
 					print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
 				DynAlloc.append(VarDecl)
-				#if(Dims>1):
-				tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * sizeof('+datatype+suffix+'))'+';'		
+				if(Dims==1):
+					tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+'*'+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
+				else:
+					tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * sizeof('+datatype+suffix+'))'+';'
+				
 				DynAlloc.append(tmp);
 				  		
 				if debug:
