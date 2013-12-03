@@ -4,16 +4,16 @@
 #
 #
 
-import sys,re,math
+import sys,re,math,commands
 
 def main():
 	Max={}
 	Min={}
 	Max['Vars']=1
 	Min['Vars']=1
-	Max['Dims']=2
+	Max['Dims']=1
 	Min['Dims']=1
-	Max['Stride']=2 # ie., 2^4
+	Max['Stride']=1 # ie., 2^4
 	Min['Stride']=0 # ie., 2^0=1
 	Alloc=['d','s']	
 	Init='index0*10+index0'
@@ -23,26 +23,50 @@ def main():
 	for NumVars in range(Min['Vars'],Max['Vars']+1):
 		for NumDims in range(Min['Dims'],Max['Dims']+1):
 			SizeString=''
+			SizeName=''
 			for i in range(NumDims-1):
 				SizeString=','+str(size[Max['Dims']-1-i])+str(SizeString)
+				SizeName='_'+str(size[Max['Dims']-1-i])+str(SizeName)
 			if(NumDims==1):
 				SizeString=str(size[Max['Dims']-1])
+				SizeName=str(size[Max['Dims']-1])
 			else:
 				SizeString=str(size[Max['Dims']-1])+str(SizeString)
+				SizeName=str(size[Max['Dims']-1])+str(SizeName)
 			for BaseOfStride in range(Min['Stride'],Max['Stride']+1):
 				Stride=2**BaseOfStride
 				for CurrAlloc in Alloc:
-					ConfigFile="Config_"+str(NumVars)+"vars_"+str(NumDims)+"dims_"+str(Stride)+"stride_alloc_"+str(CurrAlloc)+".txt"
+					UniqueID=str(NumVars)+"vars_"+str(CurrAlloc)+'_'+str(NumDims)+"dims_"+str(SizeName)+'_'+str(Stride)+"stride"
+					Config="Config_"+UniqueID
+					ConfigFile=str(Config)+'.txt'
+					CMDConfigDir='mkdir '+str(Config)
+					commands.getoutput(CMDConfigDir)
 					print "\n\t Config file: "+str(ConfigFile)
 					f=open(ConfigFile,'w')
-					f.write("\n\t #vars "+str(NumVars))
-					f.write("\n\t #dims "+str(NumDims))
-					f.write("\n\t #stride "+str(Stride))
-					f.write("\n\t #size "+str(SizeString))
-					f.write("\n\t #allocation "+str(CurrAlloc) )
-					f.write("\n\t #init "+str(Init))
-					f.write("\n\t #datastructure "+str(DS))
+					f.write("\n#vars "+str(NumVars))
+					f.write("\n#dims "+str(NumDims))
+					f.write("\n#stride "+str(Stride))
+					f.write("\n#size "+str(SizeString))
+					f.write("\n#allocation "+str(CurrAlloc) )
+					f.write("\n#init "+str(Init))
+					f.write("\n#datastructure "+str(DS))
 					f.close()
+					CMDmvConfigFile='mv '+str(ConfigFile)+' '+str(Config) 
+					commands.getoutput(CMDmvConfigFile)					
+					CMDcpStrideBenchmarks='cp StrideBenchmarks.py '+str(Config)
+					commands.getoutput(CMDcpStrideBenchmarks)
+					CMDrunStrideBenchmarks='python StrideBenchmarks.py -c ./'+str(Config)+'/'+str(ConfigFile)
+					#print "\n\t Run: "+str(CMDrunStrideBenchmarks)
+					commands.getoutput(CMDrunStrideBenchmarks)
+					SRCCode='StrideBenchmarks_'+str(UniqueID)+'.c'
+					EXE='StrideBenchmarks_'+str(UniqueID)
+					#print "\n\t SRC: "+str(SRCCode)
+					CMDmvSRCCode='mv '+str(SRCCode)+' '+str(Config)
+					commands.getoutput(CMDmvSRCCode)
+					CMDCompileSRC='gcc -g ./'+str(Config)+'./'+str(SRCCode)+' -o '+str(EXE)
+					commands.getoutput(CMDCompileSRC)
+					#CMD
+					
 	
 	
 
