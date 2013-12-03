@@ -15,10 +15,11 @@ def main():
 	Min['Dims']=1
 	Max['Stride']=1 # ie., 2^4
 	Min['Stride']=0 # ie., 2^0=1
-	Alloc=['d','s']	
+	Alloc=['d']	
 	Init='index0*10+index0'
 	DS='i'
 	size=[10,20,10,100000];
+	SpatWindow=[8,16,32];
 	
 	for NumVars in range(Min['Vars'],Max['Vars']+1):
 		for NumDims in range(Min['Dims'],Max['Dims']+1):
@@ -51,20 +52,34 @@ def main():
 					f.write("\n#init "+str(Init))
 					f.write("\n#datastructure "+str(DS))
 					f.close()
-					CMDmvConfigFile='mv '+str(ConfigFile)+' '+str(Config) 
-					commands.getoutput(CMDmvConfigFile)					
-					CMDcpStrideBenchmarks='cp StrideBenchmarks.py '+str(Config)
-					commands.getoutput(CMDcpStrideBenchmarks)
-					CMDrunStrideBenchmarks='python StrideBenchmarks.py -c ./'+str(Config)+'/'+str(ConfigFile)
+					#CMDmvConfigFile='mv '+str(ConfigFile)+' '+str(Config) 
+					#commands.getoutput(CMDmvConfigFile)					
+					#CMDcpStrideBenchmarks='cp StrideBenchmarks.py '+str(Config)
+					#commands.getoutput(CMDcpStrideBenchmarks)
+					CMDrunStrideBenchmarks='python StrideBenchmarks.py -c '+str(ConfigFile)
 					#print "\n\t Run: "+str(CMDrunStrideBenchmarks)
 					commands.getoutput(CMDrunStrideBenchmarks)
 					SRCCode='StrideBenchmarks_'+str(UniqueID)+'.c'
 					EXE='StrideBenchmarks_'+str(UniqueID)
 					#print "\n\t SRC: "+str(SRCCode)
-					CMDmvSRCCode='mv '+str(SRCCode)+' '+str(Config)
-					commands.getoutput(CMDmvSRCCode)
-					CMDCompileSRC='gcc -g ./'+str(Config)+'./'+str(SRCCode)+' -o '+str(EXE)
+					#CMDmvSRCCode='mv '+str(SRCCode)+' '+str(Config)
+					#commands.getoutput(CMDmvSRCCode)
+					CMDCompileSRC='gcc -g '+str(SRCCode)+' -o '+str(EXE)
 					commands.getoutput(CMDCompileSRC)
+					CMDPebilCompile='pebil --typ sim --inp SimInp.log --app '+str(EXE)
+					commands.getoutput(CMDPebilCompile)
+					
+					#for CurrSW in SpatWindow:
+					#	CMDExportSW='export METASIM_SPATIAL_WINDOW='+str(CurrSW)
+					#	commands.getoutput(CMDExportSW)
+					#	print "\n\t "+str(CMDExportSW)
+					#	SimInst=str(EXE)+'.siminst'
+					#	CMDRunSiminst='./'+str(SimInst)
+					#	commands.getoutput(CMDRunSiminst)
+					#	CMDRenameSpatial='mv *.spatial'+' SW_'+str(CurrSW)
+					#	commands.getoutput(CMDRenameSpatial)
+					
+					
 					#CMD
 					
 	
