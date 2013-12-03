@@ -471,7 +471,7 @@ def main(argv):
 			#print "\n\t StrideRange: "+str(StrideRange)
 		#for CurrDim in range(ConfigParams['Dims']):
 		CurrDim=ConfigParams['Dims']-1
-		for CurrStride in range(StrideRange):
+		for CurrStride in range(1,StrideRange):
 			if(CurrStride==0 or CurrStride==1):
 				UseStride=CurrStride
 				WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )				
