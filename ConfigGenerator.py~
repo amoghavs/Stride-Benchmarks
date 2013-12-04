@@ -11,51 +11,33 @@ def main():
 	Min={}
 	Max['Vars']=1
 	Min['Vars']=1
-	Max['Dims']=5
+	Max['Dims']=2
 	Min['Dims']=1
-	Max['Stride']=0 # ie., 2^4
+	Max['Stride']=1 # ie., 2^4
 	Min['Stride']=0 # ie., 2^0=1
 	Alloc=['d']	
 	Init='index0*10+index0'
 	DS='i'
+	size=[10,10,10,1000];
 	SpatWindow=[8,16,32];
-	MbyteSize=28 # 32Mbyte= 2^20[1M] * 2^5 [32] * 2^3[byte]
-	MaxSize=2**MbyteSize
-	Dim0Size=2**(MbyteSize-8)
-	HigherDimSize= MaxSize/	Dim0Size
+	
 	for NumVars in range(Min['Vars'],Max['Vars']+1):
 		for NumDims in range(Min['Dims'],Max['Dims']+1):
-
+			SizeString=''
+			SizeName=''
+			for i in range(NumDims-1):
+				SizeString=str(size[Max['Dims']-2-i])+','+str(SizeString)
+				SizeName=str(size[Max['Dims']-2-i])+'_'+str(SizeName)
+			if(NumDims==1):
+				SizeString=str(size[Max['Dims']-1])
+				SizeName=str(size[Max['Dims']-1])
+			else:
+				SizeString=str(SizeString)+str(size[Max['Dims']-1])
+				SizeName=str(SizeName)+str(size[Max['Dims']-1])
 			
 			#print "\n\t SizeString: "+str(SizeString)+" and SizeName: "+str(SizeName)
 			for BaseOfStride in range(Min['Stride'],Max['Stride']+1):
 				Stride=2**BaseOfStride
-				SizeString=''
-				SizeName=''				
-				if (NumDims>1):
-					ResolveBases=1
-					IncrementLastDim=0
-					while ResolveBases:
-						EachDimBase=( math.log(float(HigherDimSize),2) - IncrementLastDim)/(NumDims-1)
-						if(int(EachDimBase)==EachDimBase):
-							ResolveBases=0
-						else:
-							IncrementLastDim+=1					
-					
-					print "\n\t NumDims: "+str(NumDims)+" Each Dim Base: "+str(EachDimBase)+" IncrementLastDim: "+str(IncrementLastDim)
-					EachDimSize=int(2**EachDimBase)
-					for i in range(NumDims-2):
-						SizeString=str(EachDimSize)+','+str(SizeString)
-						SizeName=str(EachDimSize)+'_'+str(SizeName)
-					
-					SizeString=str(SizeString)+str(int(EachDimSize*(2**IncrementLastDim)))+','+str(Dim0Size)
-					SizeName=str(SizeName)+str(int(EachDimSize*(2**IncrementLastDim)))+'_'+str(Dim0Size)
-					
-				else:
-					SizeString=MaxSize
-					SizeName=MaxSize
-				print "\n\t SizeName: "+str(SizeName)+" SizeString "+str(SizeString)
-				
 				for CurrAlloc in Alloc:
 					UniqueID=str(NumVars)+"vars_"+str(CurrAlloc)+'_'+str(NumDims)+"dims_"+str(SizeName)+'_'+str(Stride)+"stride"
 					Config="Config_"+UniqueID

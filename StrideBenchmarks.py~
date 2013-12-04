@@ -470,11 +470,23 @@ def main(argv):
 	
 	for VarNum in range(ConfigParams['NumVars']):
 		CurrVar='Var'+str(VarNum)
+		StrideRange=int(math.log(float(ConfigParams['stride'][VarNum]),2))+2		
+			#print "\n\t StrideRange: "+str(StrideRange)
+		#for CurrDim in range(ConfigParams['Dims']):
 		CurrDim=ConfigParams['Dims']-1
-		UseStride=ConfigParams['stride'][VarNum]
-		WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )				
-		ThisLoop=StridedLoop(UseStride,CurrDim,CurrVar,VarNum,ConfigParams,debug)
-		WriteArray(ThisLoop,WriteFile)	
+		for CurrStride in range(1,StrideRange):
+			if(CurrStride==0 or CurrStride==1):
+				UseStride=CurrStride
+				WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )				
+				ThisLoop=StridedLoop(UseStride,CurrDim,CurrVar,VarNum,ConfigParams,debug)
+				WriteArray(ThisLoop,WriteFile)	
+			else:
+				UseStride=2**(CurrStride-1)
+				WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )
+				ThisLoop=StridedLoop(UseStride,CurrDim,CurrVar,VarNum, ConfigParams,debug)
+				WriteArray(ThisLoop,WriteFile)				
+		
+		
 		
 	WriteFile.write("\n\t return 0;")
 	WriteFile.write("\n\t}")
