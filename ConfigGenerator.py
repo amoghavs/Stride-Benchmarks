@@ -11,21 +11,23 @@ def main():
 	Min={}
 	Max['Vars']=1
 	Min['Vars']=1
-	Max['Dims']=2
-	Min['Dims']=1
+	Max['Dims']=3
+	Min['Dims']=2
 	Max['Stride']=2 # ie., 2^4
 	Min['Stride']=2 # ie., 2^0=1
-	Alloc=['d']	
+	Alloc=['d','s']	
 	Init='index0*10+index0'
 	DS='i'
 	SpatWindow=[8,16,32];
-	MbyteSize=12 # 32Mbyte= 2^20[1M] * 2^5 [32] * 2^3[byte]
+	MbyteSize=10 # 32Mbyte= 2^20[1M] * 2^5 [32] * 2^3[byte]
 	MaxSize=2**MbyteSize
 	Dim0Size=2**(MbyteSize-8)
 	HigherDimSize= MaxSize/	Dim0Size
+	
+	
+	MasterSWStats=open("MasterSWStats.txt",'w')
 	for NumVars in range(Min['Vars'],Max['Vars']+1):
 		for NumDims in range(Min['Dims'],Max['Dims']+1):
-
 			for BaseOfStride in range(Min['Stride'],Max['Stride']+1):
 				Stride=2**BaseOfStride
 				SizeString=''
@@ -75,16 +77,21 @@ def main():
 					commands.getoutput(CMDrunStrideBenchmarks)
 					SRCCode='StrideBenchmarks_'+str(UniqueID)+'.c'
 					EXE='StrideBenchmarks_'+str(UniqueID)
-					CMDCompileSRC='gcc -g '+str(SRCCode)+' -o '+str(EXE)
+					CMDCompileSRC='gcc -O3 -g '+str(SRCCode)+' -o '+str(EXE)
 					commands.getoutput(CMDCompileSRC)
 					CMDPebilCompile='pebil --typ sim --inp SimInp.log --app '+str(EXE)
 					commands.getoutput(CMDPebilCompile)
 					
 					
 					SWStats=open(str('SWStats_'+str(Config)+'.txt'),'w')
+					MasterSWStats.write("\n\t ###########################################")
+					MasterSWStats.write("\n\t Config dir: "+str(Config))
 					for CurrSW in SpatWindow:
-						SWStats.write("\n---------------------")
+						SWStats.write("\n\t---------------------")
+						MasterSWStats.write("\n\t---------------------")
 						SWStats.write("\n\t Spatial-window size: "+str(CurrSW)+"\n\n")
+						MasterSWStats.write("\n\t Spatial-window size: "+str(CurrSW)+"\n\n")
+
 						CMDExportSW='export METASIM_SPATIAL_WINDOW='+str(CurrSW)
 						SimInst=str(EXE)+'.siminst'
 						CMDRunSiminst='./'+str(SimInst)
@@ -105,10 +112,12 @@ def main():
 						SWFileContents=f.readlines()
 						f.close()
 						SWStats.write( "\n\t Bin: \t\t Range: \t\t Count: \t\t % ")						
+						MasterSWStats.write( "\n\t Bin: \t\t Range: \t\t Count: \t\t % ")
 						for CurrLine in SWFileContents:
 							Data=re.match(r'\s*.*Bin\:\s*(\d+)+.*Range\:\s*(\d+)+.*Count\:\s*(\d+)+$',CurrLine)	
 							if Data:
 								SWStats.write( "\n\t "+str(Data.group(1))+"\t\t "+str(Data.group(2))+"\t\t "+str(Data.group(3))+"\t\t "+str( 100* float(Data.group(3)) / TotalAccess )  )
+								MasterSWStats.write( "\n\t "+str(Data.group(1))+"\t\t "+str(Data.group(2))+"\t\t "+str(Data.group(3))+"\t\t "+str( 100* float(Data.group(3)) / TotalAccess )  )								
 								#SWStats.write( "\n\t Bin: "+str(Data.group(1))+"\t Range: "+str(Data.group(2))+"\t Count: "+str(Data.group(3))+"\t % "+str( 100* float(Data.group(3)) / TotalAccess )  )
 								#print "\n\t Bin: "+str(Data.group(1))+" Range: "+str(Data.group(2))+" Count: "+str(Data.group(3))+" % "+str( 100* float(Data.group(3)) / TotalAccess ) 
 						
