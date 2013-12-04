@@ -66,6 +66,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     FuncDecl='void Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+ConfigParams['VarDecl'][VarNum]+' '+str(A)+',int Stride, int Sum )'
     ThisLoop.append(FuncDecl)
     ThisLoop.append('{')
+    ThisLoop.append(str(ConfigParams['indices'][len(ConfigParams['indices'])-1]))
+    ThisLoop.append('int AnotherIndex=0;')
     NumForLoops=ConfigParams['Dims']
     LHSindices=''
     RHSindices=''
@@ -359,7 +361,9 @@ def main(argv):
 			tmp+=ConfigParams['indices'][i]+','	
 		tmp+=ConfigParams['indices'][len(ConfigParams['indices'])-1]+';'
 		if debug:
-			print "\n\t This is how the indices will look: "+tmp+" \n";							
+			print "\n\t This is how the indices will look: "+tmp+" \n";		
+		
+		ConfigParams['indices'].append(tmp) # Need to insert this in the function. Lazily adding this here to avoid declaring another key for this hash.					
 		InitAlloc.append(tmp);	
 		DynAlloc=[]	
 		ConfigParams['VarDecl']=[]	
@@ -505,7 +509,7 @@ def main(argv):
 	
 	WriteArray(InitAlloc,WriteFile)
 	WriteArray(DynAlloc,WriteFile)
-	
+	WriteFile.write("\n\t int Sum=0;")
 	for VarNum in range(ConfigParams['NumVars']):
 		WriteArray(InitLoop[VarNum],WriteFile)	
 	
