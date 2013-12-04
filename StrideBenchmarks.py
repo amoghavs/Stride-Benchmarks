@@ -20,7 +20,7 @@ def InitVar(A,VarNum,ConfigParams,debug):
     	LHSindices=''
     	RHSindices=''
     
-
+	
     	for j in range(NumForLoops):
     		if(j==NumForLoops-1):
 			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['stride'][VarNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
@@ -51,16 +51,21 @@ def InitVar(A,VarNum,ConfigParams,debug):
 	return ThisLoop
 
 
-def StridedLoop(Stride,StrideDim,A,VarNum,ConfigParams,debug):
+def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     if( (StrideDim > ConfigParams['Dims']) or (StrideDim < 0) ):
       print "\n\t ERROR: For variaable "+str(A)+" a loop with stride access: "+str(StrideDim)+" has been requested, which is illegal!"
       sys.exit(0)
 
     if debug:	
 	    print "\n\t In StrideLoop: Variable: "+str(A)+" dimension: "+str(StrideDim)+" and requested stride is "+str(Stride)
+	    
+    FuncName=' Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+str(A)+','+str(Stride)+',Sum'+');'	    
     ThisLoop=[]
     ThisLoop.append('Sum=2;')
-    tmp=' This is the variable I am using: '+str(A)
+    ThisLoop.append(FuncName)
+    FuncDecl='void Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+ConfigParams['VarDecl'][VarNum]+' '+str(A)+',int Stride, int Sum )'
+    ThisLoop.append(FuncDecl)
+    ThisLoop.append('{')
     NumForLoops=ConfigParams['Dims']
     LHSindices=''
     RHSindices=''
@@ -102,7 +107,8 @@ def StridedLoop(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     		TabSpace+="\t"
     	ThisLoop.append(TabSpace+'}')
     
-    
+    ThisLoop.append('return ;')
+    ThisLoop.append('}')
     return ThisLoop
 
 def WriteArray(Array,File):
@@ -114,7 +120,6 @@ def WriteArray(Array,File):
 
 
 def main(argv):
-	print "\n\t Initializing Loop in function branch!! \n"
 	config=''
 	debug=0
 	try:
@@ -356,19 +361,24 @@ def main(argv):
 		if debug:
 			print "\n\t This is how the indices will look: "+tmp+" \n";							
 		InitAlloc.append(tmp);	
-		DynAlloc=[]		
+		DynAlloc=[]	
+		ConfigParams['VarDecl']=[]	
 		for index in range(ConfigParams['NumVars']):
 			VarDecl=''
+			datatype=VarDecl
 			if(ConfigParams['datastructure'][index]=='f' or ConfigParams['datastructure'][index]=='float'):
 				VarDecl='float' 
+				datatype=VarDecl
 				if debug:
 					print "\n\t Allocated float to variable "+str(index)
 			elif(ConfigParams['datastructure'][index]=='d' or ConfigParams['datastructure'][index]=='double'):
 				VarDecl='double' 
+				datatype=VarDecl
 				if debug:
 					print "\n\t Allocated double to variable "+str(index)				
 			elif(ConfigParams['datastructure'][index]=='i' or ConfigParams['datastructure'][index]=='integer'):
 				VarDecl='int' 
+				datatype=VarDecl
 				if debug:
 					print "\n\t Allocated integer to variable "+str(index)								
 			else:
@@ -376,7 +386,7 @@ def main(argv):
 				sys.exit(0)
 				
 			if( ConfigParams['alloc'][index]=='d' or ConfigParams['alloc'][index]=='dynamic'):
-				datatype=VarDecl
+				
 				var=' Var'+str(index)
 				prefix=''
 				suffix=''
@@ -433,7 +443,11 @@ def main(argv):
 				if debug:
 					print "\n\t Variable declaration for variable "+str(index)+" is static and is as follows: "+str(VarDecl)+"\n"
 				InitAlloc.append(VarDecl)
-	
+
+			VarType=str(datatype)
+			for i in range(ConfigParams['Dims']):
+				VarType+='*'
+			ConfigParams['VarDecl'].append(VarType)	
 			#InitAlloc[index]=[]
 
 
@@ -450,33 +464,56 @@ def main(argv):
 		for CurrAlloc in ConfigParams['alloc']:
 			alloc_str+=str(CurrAlloc)
 					
-		SrcFileName='StrideBenchmarks_'+str(ConfigParams['NumVars'])+"vars_"+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_'+str(StrideString)+'stride.c'
 		
-		print "\n\t Source file name: "+str(SrcFileName)+"\n"		
-		WriteFile=open(SrcFileName,'w')			
-
-		WriteArray(InitAlloc,WriteFile)
-		WriteArray(DynAlloc,WriteFile)
+		
 
 						
 	else:
-		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "		
+		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "		#sys.exit(0)
 	
-	WriteFile.write("\n\t int Sum=0,AnotherIndex=0;")
+	SrcFileName='StrideBenchmarks_'+str(ConfigParams['NumVars'])+"vars_"+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_'+str(StrideString)+'stride.c'
+	WriteFile=open(SrcFileName,'w')	
+		
+	InitLoop=[]
 	for VarNum in range(ConfigParams['NumVars']):
 		CurrVar='Var'+str(VarNum)		
-		ThisLoop=InitVar(CurrVar,VarNum,ConfigParams,debug)	
-		WriteArray(ThisLoop,WriteFile)	
+		Temp=InitVar(CurrVar,VarNum,ConfigParams,debug)	
+		InitLoop.append(Temp)
+		#WriteArray(ThisLoop,WriteFile)	
  	
-	
+	ThisLoop=[]
+	Comments=[]
 	for VarNum in range(ConfigParams['NumVars']):
 		CurrVar='Var'+str(VarNum)
 		CurrDim=ConfigParams['Dims']-1
 		UseStride=ConfigParams['stride'][VarNum]
-		WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )				
-		ThisLoop=StridedLoop(UseStride,CurrDim,CurrVar,VarNum,ConfigParams,debug)
-		WriteArray(ThisLoop,WriteFile)	
+		#WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )	
+		ThisLoopComment="\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim)			
+		Comments.append(ThisLoopComment)
+		ThisLoop.append(StridedLoopInFunction(UseStride,CurrDim,CurrVar,VarNum,ConfigParams,debug))
+		#Comments.append('//')
+		Comments.append(ThisLoop[VarNum].pop(0))
+		Comments.append(ThisLoop[VarNum].pop(0))
+		#WriteArray(ThisLoop,WriteFile)	
 		
+
+
+	print "\n\t Source file name: "+str(SrcFileName)+"\n"		
+		
+	for VarNum in range(ConfigParams['NumVars']):
+		WriteArray(ThisLoop[VarNum],WriteFile)
+	
+	WriteArray(InitAlloc,WriteFile)
+	WriteArray(DynAlloc,WriteFile)
+	
+	for VarNum in range(ConfigParams['NumVars']):
+		WriteArray(InitLoop[VarNum],WriteFile)	
+	
+	for VarNum in range(ConfigParams['NumVars']):
+		WriteArray(Comments,WriteFile)	
+
+
+	
 	WriteFile.write("\n\t return 0;")
 	WriteFile.write("\n\t}")
 	WriteFile.close()		
