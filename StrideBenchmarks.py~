@@ -114,7 +114,6 @@ def WriteArray(Array,File):
 
 
 def main(argv):
-	print "\n\t Initializing Loop in function branch!! \n"
 	config=''
 	debug=0
 	try:
