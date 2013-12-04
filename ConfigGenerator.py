@@ -111,24 +111,25 @@ def main():
 						f=open(SWFile,'r')
 						SWFileContents=f.readlines()
 						f.close()
-						SWStats.write( "\n\t Bin: \t\t Range: \t\t Count: \t\t % ")						
-						MasterSWStats.write( "\n\t Bin: \t\t Range: \t\t Count: \t\t % ")
+						SWStats.write( "\n\t\t Bin: \t\t Range: \t\t Count: \t\t Percentage ")						
+						MasterSWStats.write( "\n\t\t Bin: \t\t Range: \t\t Count: \t\t Percentage ")
 						for CurrLine in SWFileContents:
 							Data=re.match(r'\s*.*Bin\:\s*(\d+)+.*Range\:\s*(\d+)+.*Count\:\s*(\d+)+$',CurrLine)	
 							if Data:
-								SWStats.write( "\n\t "+str(Data.group(1))+"\t\t "+str(Data.group(2))+"\t\t "+str(Data.group(3))+"\t\t "+str( 100* float(Data.group(3)) / TotalAccess )  )
-								MasterSWStats.write( "\n\t "+str(Data.group(1))+"\t\t "+str(Data.group(2))+"\t\t "+str(Data.group(3))+"\t\t "+str( 100* float(Data.group(3)) / TotalAccess )  )								
+								SWStats.write( "\n\t\t "+str(Data.group(1))+"\t\t "+str(Data.group(2))+"\t\t "+str(Data.group(3))+"\t\t "+str( 100* float(Data.group(3)) / TotalAccess )  )
+								MasterSWStats.write( "\n\t\t "+str(Data.group(1))+"\t\t "+str(Data.group(2))+"\t\t "+str(Data.group(3))+"\t\t "+str( 100* float(Data.group(3)) / TotalAccess )  )								
 								#SWStats.write( "\n\t Bin: "+str(Data.group(1))+"\t Range: "+str(Data.group(2))+"\t Count: "+str(Data.group(3))+"\t % "+str( 100* float(Data.group(3)) / TotalAccess )  )
 								#print "\n\t Bin: "+str(Data.group(1))+" Range: "+str(Data.group(2))+" Count: "+str(Data.group(3))+" % "+str( 100* float(Data.group(3)) / TotalAccess ) 
 						
 						SWStats.write("\n\n")		
-						
+						MasterSWStats.write("\n\n")
 					SWStats.close()
 					CMDMvAll='mv *.c SW* *siminst* '+str(ConfigFile)+' '+str(EXE)+' '+str(Config)
 					commands.getoutput(CMDMvAll)
 					CMDRmMetaFiles='rm -f *Instructions* LRU*'
 					commands.getoutput(CMDRmMetaFiles)
 					#CMD
+	MasterSWStats.close()
 					
 			
 	
