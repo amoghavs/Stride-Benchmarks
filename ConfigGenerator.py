@@ -11,15 +11,15 @@ def main():
 	Min={}
 	Max['Vars']=1
 	Min['Vars']=1
-	Max['Dims']=3
+	Max['Dims']=2
 	Min['Dims']=2
-	Max['Stride']=2 # ie., 2^4
-	Min['Stride']=2 # ie., 2^0=1
+	Max['Stride']=4 # ie., 2^4
+	Min['Stride']=0 # ie., 2^0=1
 	Alloc=['d','s']	
 	Init='index0*10+index0'
 	DS='i'
 	SpatWindow=[8,16,32];
-	MbyteSize=10 # 32Mbyte= 2^20[1M] * 2^5 [32] * 2^3[byte]
+	MbyteSize=28 # 2^28=32Mbyte= 2^20[1M] * 2^5 [32] * 2^3[byte]
 	MaxSize=2**MbyteSize
 	Dim0Size=2**(MbyteSize-8)
 	HigherDimSize= MaxSize/	Dim0Size
@@ -79,7 +79,33 @@ def main():
 					EXE='StrideBenchmarks_'+str(UniqueID)
 					CMDCompileSRC='gcc -O3 -g '+str(SRCCode)+' -o '+str(EXE)
 					commands.getoutput(CMDCompileSRC)
-					CMDPebilCompile='pebil --typ sim --inp SimInp.log --app '+str(EXE)
+					CMDPebilCompile='pebil --typ jbb --app '+str(EXE)
+					commands.getoutput(CMDPebilCompile)
+					CMDRunJbb='./'+str(EXE)+'.jbbinst'
+					commands.getoutput(CMDRunJbb)
+					FuncName='FuncVar0Stride'+str(Stride)+'Dim'+str(NumDims-1)  # CAUTION: This should be changed if >1 variable is going to be used.
+					CMDFindBBs='grep '+str(FuncName)+' '+str(EXE)+'.r00000000.t00000001.jbbinst > JBBInfo.txt'
+					commands.getoutput(CMDFindBBs)
+					jbbfile=open("JBBInfo.txt",'r')
+					FuncBlks=jbbfile.readlines()
+					FuncBlkstoSimulate=[]
+					for BB in FuncBlks:
+						#print "\n\t "+str(BB)
+						CheckBLK=re.match(r'\s*BLK.*',BB)
+						if(CheckBLK):
+							GetBBID=re.split('\t',BB)#re.match(r'\s*BLK\s*(\d+)+\s*0x(.*)\s*(\d+)+\s*(\d+)+.*',BB)
+							if GetBBID:
+								#print "\n\t Look Whos here: "+str(GetBBID[2]) #[2])+"!! "
+								FuncBlkstoSimulate.append(str(GetBBID[2]))
+							
+					BBFile=open('BBlist.txt','w')
+					for BB in range(1,len(FuncBlkstoSimulate)):
+						BBFile.write('\n\t'+str(FuncBlkstoSimulate[BB]))
+
+					BBFile.write("\n")
+					BBFile.close()
+
+					CMDPebilCompile='pebil --typ sim --app '+str(EXE)+' --inp BBlist.txt'
 					commands.getoutput(CMDPebilCompile)
 					
 					
@@ -111,8 +137,8 @@ def main():
 						f=open(SWFile,'r')
 						SWFileContents=f.readlines()
 						f.close()
-						SWStats.write( "\n\t\t Bin: \t\t Range: \t\t Count: \t\t Percentage ")						
-						MasterSWStats.write( "\n\t\t Bin: \t\t Range: \t\t Count: \t\t Percentage ")
+						SWStats.write( "\n\t\t Bin: \t\t Range: \t Count: \t\t Percentage ")						
+						MasterSWStats.write( "\n\t\t Bin: \t\t Range: \t Count: \t\t Percentage ")
 						for CurrLine in SWFileContents:
 							Data=re.match(r'\s*.*Bin\:\s*(\d+)+.*Range\:\s*(\d+)+.*Count\:\s*(\d+)+$',CurrLine)	
 							if Data:
@@ -124,7 +150,7 @@ def main():
 						SWStats.write("\n\n")		
 						MasterSWStats.write("\n\n")
 					SWStats.close()
-					CMDMvAll='mv *.c SW* *siminst* '+str(ConfigFile)+' '+str(EXE)+' '+str(Config)
+					CMDMvAll='mv *.c SW* *siminst* *jbbinst* BBlist.txt '+str(ConfigFile)+' '+str(EXE)+' '+str(Config)
 					commands.getoutput(CMDMvAll)
 					CMDRmMetaFiles='rm -f *Instructions* LRU*'
 					commands.getoutput(CMDRmMetaFiles)
@@ -139,3 +165,4 @@ def main():
 
 if __name__=="__main__":
 	main() #sys.argv[1:])
+	
