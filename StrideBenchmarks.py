@@ -348,11 +348,12 @@ def main(argv):
 		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions and InitNotFound is"+str(~InitNotFound)	
 
 		InitAlloc=[]
+		LibAlloc=[]
 		ConfigParams['indices']=[]
 		tmp='#include<stdio.h>'
-		InitAlloc.append(tmp)
+		LibAlloc.append(tmp)
 		tmp='#include<stdlib.h>'
-		InitAlloc.append(tmp)	
+		LibAlloc.append(tmp)	
 		tmp='int main()'	
 		InitAlloc.append(tmp)
 		InitAlloc.append('\n\t{')				
@@ -454,7 +455,7 @@ def main(argv):
 				VarDecl+=';'
 				if debug:
 					print "\n\t Variable declaration for variable "+str(index)+" is static and is as follows: "+str(VarDecl)+"\n"
-				InitAlloc.append(VarDecl)
+				LibAlloc.append(VarDecl)
 
 	
 			#InitAlloc[index]=[]
@@ -508,7 +509,8 @@ def main(argv):
 
 
 	print "\n\t Source file name: "+str(SrcFileName)+"\n"		
-		
+	
+	WriteArray(LibAlloc,WriteFile)	
 	for VarNum in range(ConfigParams['NumVars']):
 		WriteArray(ThisLoop[VarNum],WriteFile)
 	
