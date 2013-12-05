@@ -63,7 +63,10 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     ThisLoop=[]
     ThisLoop.append('Sum=2;')
     ThisLoop.append(FuncName)
-    FuncDecl='void Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+ConfigParams['VarDecl'][VarNum]+' '+str(A)+',int Stride, int Sum )'
+    if(ConfigParams['alloc'][VarNum]=='d' or ConfigParams['alloc'][VarNum]=='dynamic'):
+	    FuncDecl='void Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+ConfigParams['VarDecl'][VarNum]+' '+str(A)+',int Stride, int Sum )'
+    else:
+    	    FuncDecl='void Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+ConfigParams['VarDecl'][VarNum]+' '+',int Stride, int Sum )'
     ThisLoop.append(FuncDecl)
     ThisLoop.append('{')
     ThisLoop.append(str(ConfigParams['indices'][len(ConfigParams['indices'])-1]))
@@ -76,8 +79,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     for j in range(NumForLoops):
 
 		if(j==StrideDim):
-			RHSindices+='['+str(ConfigParams['indices'][j])+' +'+str(Stride)+' ]'
-			#RHSindices+='['+str(ConfigParams['indices'][j])+' ]'
+			#RHSindices+='['+str(ConfigParams['indices'][j])+' +'+str(Stride)+' ]'
+			RHSindices+='['+str(ConfigParams['indices'][j])+' ]'
 			if(Stride>1):
 				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 , AnotherIndex=0 ; '+	str(ConfigParams['indices'][j])+' < '+'( ('+str(ConfigParams['size'][j])+' * '+str(ConfigParams['stride'][VarNum])+') - '+str(Stride) + ') && AnotherIndex < ' +str(ConfigParams['size'][j]) + ' ; ' +str(ConfigParams['indices'][j])+'+= '+str(Stride)+', AnotherIndex++ )'
 			else:
@@ -436,22 +439,24 @@ def main(argv):
 						DynAlloc.append(MallocEqn)
 				   		if debug:
 							print "\t The malloc equation is: "+str(MallocEqn)+"\n"
-				
+				VarType=str(datatype)
+				for i in range(ConfigParams['Dims']):
+					VarType+='*'
+				ConfigParams['VarDecl'].append(VarType)
+				print "\n\t ConfigParams['VarDecl']: "+VarType
 				
 			else:
 				VarDecl+=' Var'+str(index)
 				for CurrDim in range(Dims-1):
 					VarDecl+='['+str(ConfigParams['size'][CurrDim])+']'
 				VarDecl+='['+str(ConfigParams['size'][ConfigParams['Dims']-1])+' * '+str(ConfigParams['stride'][index])+']'
+				ConfigParams['VarDecl'].append(VarDecl)
 				VarDecl+=';'
 				if debug:
 					print "\n\t Variable declaration for variable "+str(index)+" is static and is as follows: "+str(VarDecl)+"\n"
 				InitAlloc.append(VarDecl)
 
-			VarType=str(datatype)
-			for i in range(ConfigParams['Dims']):
-				VarType+='*'
-			ConfigParams['VarDecl'].append(VarType)	
+	
 			#InitAlloc[index]=[]
 
 
