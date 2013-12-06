@@ -300,7 +300,7 @@ def main(argv):
 							else:
 								ConfigParams['StrideinStream'].append(StrideInThisDim)
 								FoundStrideForDims+=1
-								if(FoundStrideForDims==ConfigParams['Dims']):
+								if(FoundStrideForDims==ConfigParams['NumVars']):
 									StrideNotFound=0	
 									StrideForAllDimsNotFound=0
 									if debug:
@@ -422,7 +422,7 @@ def main(argv):
 		DynAlloc=[]	
 		ConfigParams['VarDecl']=[]	
 		
-		for CurrDim in range(ConfigParams['Dims']):
+		for CurrDim in range(ConfigParams['NumVars']):
 			largest=0
 			for j in range(ConfigParams['NumStreaminDims'][CurrDim]):
 				if(largest < ConfigParams['StrideinStream'][CurrDim][j]):
