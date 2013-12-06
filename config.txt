@@ -1,6 +1,9 @@
 #vars 2
 #dims 3
-#stride 2,2
+#StreamDims 2,1,1
+#stride0 2,2
+#stride1 1
+#stride2 1
 #size 10,2,2
 #allocation d,s
 #init index0*2,index1*3
