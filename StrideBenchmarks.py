@@ -520,7 +520,7 @@ def main(argv):
 	for VarNum in range(ConfigParams['NumVars']):
 		WriteArray(InitLoop[VarNum],WriteFile)	
 	
-	for VarNum in range(ConfigParams['NumVars']):
+#	for VarNum in range(ConfigParams['NumVars']):
 		WriteArray(Comments,WriteFile)	
 
 
