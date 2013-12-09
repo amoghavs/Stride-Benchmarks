@@ -47,16 +47,16 @@ def main():
 	Min={}
 	Max['Vars']=1
 	Min['Vars']=1
-	Max['Dims']=4
-	Min['Dims']=4
-	Max['NumStream']=1
-	Min['NumStream']=1
+	Max['Dims']=2
+	Min['Dims']=2
+	Max['NumStream']=2
+	Min['NumStream']=2
 	Max['Stride']=3 # ie., 2^4
 	Min['Stride']=0 # ie., 2^0=1
 	Alloc=['s']	
 	Init='index0*10+index0'
-	DS='f'
-	SpatWindow=[8,16,32];
+	DS='d'
+	SpatWindow=[8,16,32,64];
 	MbyteSize=24 # 2^28=32Mbyte= 2^20[1M] * 2^5 [32] * 2^3[byte]
 	MaxSize=2**MbyteSize
 	Dim0Size=2**(MbyteSize-8)
@@ -128,11 +128,18 @@ def main():
 					MaxStride=0
 					if Strides:
 						for i in range(len(Strides)-1):
-							StrideName+=str(Strides[i])+'_'
-							if(MaxStride<Strides[i]):
-								MaxStride=Strides[i] # CAUTION: Should change this when NumVars > 1
-						StrideName+=str(Strides[len(Strides)-1])
-						print "\n\t Stride-Name: "+str(StrideName)+' StrideString '+str(StrideString)
+							#StrideName+=str(Strides[i])+'_'
+							if(MaxStride<int(Strides[i])):
+								MaxStride=int(Strides[i]) # CAUTION: Should change this when NumVars > 1
+							else:
+								print "\n\t We think strides[i]: "+str(Strides[i])+" is lesser than Maxstrides: "+str(MaxStride)
+						if(MaxStride<int(Strides[len(Strides)-1])):
+							MaxStride=int(Strides[len(Strides)-1]) # CAUTION: Should change this when NumVars > 1
+						else:
+							print"\n\t -- Stride: "+str(Strides[len(Strides)-1])+" MaxStride: "+str(MaxStride)
+						
+						StrideName+=str(MaxStride) # CAUTION: Should change this when NumVars > 1
+						print "\n\t Stride-Name: "+str(StrideName)+' StrideString '+str(StrideString)+" and Maxstride: "+str(MaxStride)
 					else:
 						print "\n\t CurrStreamCombi: "+str(StrideName)+" seems to be corrupted, exitting! "
 						sys.exit()
@@ -143,7 +150,6 @@ def main():
 						Config="Config_"+UniqueID
 						ConfigFile=str(Config)+'.txt'
 
-						print "\n\t Config file: "+str(ConfigFile)
 						f=open(ConfigFile,'w')
 						f.write("\n#vars "+str(NumVars))
 						f.write("\n#dims "+str(NumDims))
@@ -164,6 +170,7 @@ def main():
 						commands.getoutput(CMDrunStrideBenchmarks)
 						SRCCode='StrideBenchmarks_'+str(UniqueID)+'.c'
 						EXE='StrideBenchmarks_'+str(UniqueID)
+						print "\n\t Config file: "+str(ConfigFile)#+" source: "+str(SRCCode)+" exe "+str(EXE)						
 						CMDCompileSRC='gcc -O3 -g '+str(SRCCode)+' -o '+str(EXE)
 						commands.getoutput(CMDCompileSRC)
 						CMDPebilCompile='pebil --typ jbb --app '+str(EXE)
@@ -171,6 +178,7 @@ def main():
 						CMDRunJbb='./'+str(EXE)+'.jbbinst'
 						commands.getoutput(CMDRunJbb)
 						FuncName='FuncVar0Stride'+str(MaxStride)+'Dim'+str(NumDims-1)  # CAUTION: This should be changed if >1 variable is going to be used.
+						print "\n\t Assuming that the function is: "+str(FuncName)
 						CMDFindBBs='grep '+str(FuncName)+' '+str(EXE)+'.r00000000.t00000001.jbbinst > JBBInfo.txt'
 						commands.getoutput(CMDFindBBs)
 						jbbfile=open("JBBInfo.txt",'r')
@@ -198,7 +206,7 @@ def main():
 						commands.getoutput(CMDPebilCompile)
 					
 					
-						"""SWStats=open(str('SWStats_'+str(Config)+'.txt'),'w')
+						SWStats=open(str('SWStats_'+str(Config)+'.txt'),'w')
 						MasterSWStats.write("\n\t ###########################################")
 						MasterSWStats.write("\n\t Config dir: "+str(Config))
 						for CurrSW in SpatWindow:
@@ -207,8 +215,8 @@ def main():
 							SWStats.write("\n\t Spatial-window size: "+str(CurrSW)+"\n\n")
 							MasterSWStats.write("\n\t Spatial-window size: "+str(CurrSW)+"\n\n")
 
-							CMDExportSW='export METASIM_SPATIAL_WINDOW='+str(CurrSW)
-							SimInst=str(EXE)+'.siminst'
+							CMDExportSW='export METASIM_SPATIAL_WINDOW='+str(CurrSW)+' | export METASIM_SAMPLE_ON=1 | export METASIM_SAMPLE_OFF=0 | echo $METASIM_SAMPLE_OFF '
+							SimInst=str(EXE)+'.siminst > stdout.txt'
 							CMDRunSiminst='./'+str(SimInst)
 							CMDExportSW+=' |'+CMDRunSiminst
 							commands.getoutput(CMDExportSW)
@@ -239,13 +247,13 @@ def main():
 							SWStats.write("\n\n")		
 							MasterSWStats.write("\n\n")
 						SWStats.close()
-						CMDMvAll='mv *.c SW* *siminst* *jbbinst* BBlist.txt '+str(ConfigFile)+' '+str(EXE)+' '+str(Config)
+						CMDMvAll='mv *.c SW* *siminst* *jbbinst* BBlist.txt stdout.txt '+str(ConfigFile)+' '+str(EXE)+' '+str(Config)
 						commands.getoutput(CMDMvAll)
 						CMDRmMetaFiles='rm -f *Instructions* LRU*'
 						commands.getoutput(CMDRmMetaFiles)
 						#CMD
 		MasterSWStats.close()
-						"""
+						
 					
 			
 	
