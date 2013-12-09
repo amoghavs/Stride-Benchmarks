@@ -75,14 +75,16 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     LHSindices=''
     RHSindices=''
     
-    print "\n\t I need to generate following number of streams: "+str(ConfigParams['NumStreaminDims'][VarNum])
+    if debug:
+    	print "\n\t I need to generate following number of streams: "+str(ConfigParams['NumStreaminDims'][VarNum])
     LargestIndexNotFound=1
     IndicesForStream=[]
     BoundsForStream=[]
     IndexIncr=''
     IndexDecl=''
     StrideIndex=[]
-    print "\n\t Maxstride: "+str(ConfigParams['maxstride'][VarNum]) +' for VarNum: '+str(VarNum)
+    if debug:
+    	print "\n\t Maxstride: "+str(ConfigParams['maxstride'][VarNum]) +' for VarNum: '+str(VarNum)
     for i in range(ConfigParams['NumStreaminDims'][VarNum]):
     	if(LargestIndexNotFound and (ConfigParams['StrideinStream'][VarNum][i]==ConfigParams['maxstride'][VarNum]) ):
 	    	LargestIndexNotFound=0
@@ -91,7 +93,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	   	BoundsForStream.insert(0,str(bounds))
 	   	CurrIndexIncr=str(ConfigParams['indices'][StrideDim])+'+= '+str(ConfigParams['StrideinStream'][VarNum][i])
 	   	IndexIncr=str(CurrIndexIncr)+str(IndexIncr)    	
-	    	print "\n\t The boss is here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)
+	    	if debug:
+	    		print "\n\t The boss is here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)
 	    	StrideIndex.append(str(ConfigParams['indices'][StrideDim]))
 	else:
 	   	index=str('StreamIndex'+str(i))
@@ -102,10 +105,12 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	   	CurrIndexIncr=','+str(index)+'+= '+str(ConfigParams['StrideinStream'][VarNum][i])
 	   	IndexIncr+=CurrIndexIncr
 	   	IndexDecl+=' int '+str(index)+'=0;'
-	   	print "\n\t The minnions are here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)
+	   	if debug:
+	   		print "\n\t The minnions are here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)
 	   	StrideIndex.append(str(index))
 	   	
-    print "\n\t IndexDecl: "+str(IndexDecl)+' Bounds: '+str(BoundsForStream[0])
+    if debug:
+    	print "\n\t IndexDecl: "+str(IndexDecl)+' Bounds: '+str(BoundsForStream[0])
     if(ConfigParams['NumStreaminDims'][VarNum] > 1):
     	ThisLoop.append(IndexDecl)
     for j in range(NumDims):
@@ -138,7 +143,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 			indices+='['+str(ConfigParams['indices'][j])+']'
 			
 	    eqn="\t"+TabSpace+str(A)+indices+' = '+'Sum'+' + '+str(A)+indices+';'
-	    print "\n So, the equation is: "+str(eqn)	
+	    if debug:
+	    	print "\n So, the equation is: "+str(eqn)	
     	    ThisLoop.append(eqn)
     	    
     for k in range(NumDims):
@@ -461,7 +467,8 @@ def main(argv):
 				if(largest < ConfigParams['StrideinStream'][CurrDim][j]):
 					largest=ConfigParams['StrideinStream'][CurrDim][j]
 			ConfigParams['maxstride'].append(largest)
-			print "\n\t For dim "+str(CurrDim)+" largest stride requested for any stream is "+str(largest)
+			if debug:
+				print "\n\t For dim "+str(CurrDim)+" largest stride requested for any stream is "+str(largest)
 		
 		#sys.exit()
 		
@@ -538,7 +545,8 @@ def main(argv):
 				for i in range(ConfigParams['Dims']):
 					VarType+='*'
 				ConfigParams['VarDecl'].append(VarType)
-				print "\n\t ConfigParams['VarDecl']: "+VarType
+				if debug:
+					print "\n\t ConfigParams['VarDecl']: "+VarType
 				
 			else:
 				VarDecl+=' Var'+str(index)
@@ -567,12 +575,19 @@ def main(argv):
 		alloc_str=''
 		for CurrAlloc in ConfigParams['alloc']:
 			alloc_str+=str(CurrAlloc)
+			
+		StreamString=''
+		for i in range(ConfigParams['NumVars']-1):
+			StreamString+=str(ConfigParams['NumStreaminDims'][i])+'_'
+		
+		StreamString+=str(ConfigParams['NumStreaminDims'][ConfigParams['NumVars']-1])
 					
  						
 	else:
-		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "		#sys.exit(0)
+		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "
+		sys.exit(0)
 	
-	SrcFileName='StrideBenchmarks_'+str(ConfigParams['NumVars'])+"vars_"+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_maxstride_'+str(StrideString)+'.c'
+	SrcFileName='StrideBenchmarks_'+str(ConfigParams['NumVars'])+"vars_"+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_streams_'+str(StreamString)+'_maxstride_'+str(StrideString)+'.c'
 	WriteFile=open(SrcFileName,'w')	
 		
 	InitLoop=[]
