@@ -5,8 +5,9 @@
 #
 
 
-import sys,re,math,commands,time
+import sys,subprocess,re,math,commands,time
 
+ 
 def RecursiveStrideGen(CurrStream,NumStreams,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,ResultString):
 	if(CurrStream==NumStreams):
 		#print "\n\t ++ CurrStream: "+str(CurrStream)
@@ -49,15 +50,15 @@ def main():
 	Min['Vars']=1
 	Max['Dims']=2
 	Min['Dims']=2
-	Max['NumStream']=3
-	Min['NumStream']=3
-	Max['Stride']=3 # ie., 2^4
+	Max['NumStream']=1
+	Min['NumStream']=1
+	Max['Stride']=1 # ie., 2^4
 	Min['Stride']=0 # ie., 2^0=1
-	Alloc=['s']	
+	Alloc=['d']	
 	Init='index0*10+index0'
-	DS='d'
-	SpatWindow=[8,16,32,64];
-	MbyteSize=12 # 2^28=32Mbyte= 2^20[1M] * 2^5 [32] * 2^3[byte]
+	DS='i'
+	SpatWindow=[8,16,32];
+	MbyteSize=20 # 2^28=32Mbyte= 2^20[1M] * 2^5 [32] * 2^3[byte]
 	MaxSize=2**MbyteSize
 	Dim0Size=2**(MbyteSize-8)
 	HigherDimSize= MaxSize/	Dim0Size
@@ -172,7 +173,7 @@ def main():
 						commands.getoutput(CMDrunStrideBenchmarks)
 						SRCCode='StrideBenchmarks_'+str(SRCID)+'.c'
 						EXE='StrideBenchmarks_'+str(SRCID)
-						print "\n\t Config file: "+str(ConfigFile)+" source: "+str(SRCCode)+" exe "+str(EXE)						
+						print "\n\t Config file: "+str(ConfigFile)#+" source: "+str(SRCCode)+" exe "+str(EXE)						
 						CMDCompileSRC='gcc -O3 -g '+str(SRCCode)+' -o '+str(EXE)
 						commands.getoutput(CMDCompileSRC)
 						CMDPebilCompile='pebil --typ jbb --app '+str(EXE)
@@ -180,7 +181,7 @@ def main():
 						CMDRunJbb='./'+str(EXE)+'.jbbinst'
 						commands.getoutput(CMDRunJbb)
 						FuncName='FuncVar0Stride'+str(MaxStride)+'Dim'+str(NumDims-1)  # CAUTION: This should be changed if >1 variable is going to be used.
-						print "\n\t Assuming that the function is: "+str(FuncName)
+						#print "\n\t Assuming that the function is: "+str(FuncName)
 						CMDFindBBs='grep '+str(FuncName)+' '+str(EXE)+'.r00000000.t00000001.jbbinst > JBBInfo.txt'
 						commands.getoutput(CMDFindBBs)
 						jbbfile=open("JBBInfo.txt",'r')
@@ -192,7 +193,7 @@ def main():
 							if(CheckBLK):
 								GetBBID=re.split('\t',BB)#re.match(r'\s*BLK\s*(\d+)+\s*0x(.*)\s*(\d+)+\s*(\d+)+.*',BB)
 								if GetBBID:
-									print "\n\t Look Whos here: "+str(GetBBID[2]) #[2])+"!! "
+									#print "\n\t Look Whos here: "+str(GetBBID[2]) #[2])+"!! "
 									FuncBlkstoSimulate.append(str(GetBBID[2]))
 							
 						BBFile=open('BBlist.txt','w')
@@ -200,10 +201,13 @@ def main():
 						#BBFile.write(str(FuncBlkstoSimulate[3]))
 						for BB in range(0,len(FuncBlkstoSimulate)):
 							BBFile.write('\n\t'+str(FuncBlkstoSimulate[BB]))
-
+					
 						BBFile.write("\n")
 						BBFile.close()
-
+						if( len(FuncBlkstoSimulate) ):
+							print "\n\t Have found few BBs of the function: "+str(FuncName)
+						else:
+							print "\n\t Did not find any BBs of the function: "+str(FuncName)					
 						CMDPebilCompile='pebil --typ sim --app '+str(EXE)+' --inp BBlist.txt'
 						commands.getoutput(CMDPebilCompile)
 					
@@ -217,11 +221,24 @@ def main():
 							SWStats.write("\n\t Spatial-window size: "+str(CurrSW)+"\n\n")
 							MasterSWStats.write("\n\t Spatial-window size: "+str(CurrSW)+"\n\n")
 
-							CMDExportSW='export METASIM_SPATIAL_WINDOW='+str(CurrSW)+' | export METASIM_SAMPLE_ON=1 | export METASIM_SAMPLE_OFF=0 '
-							SimInst=str(EXE)+'.siminst > stdout.txt'
-							CMDRunSiminst='./'+str(SimInst)
-							CMDExportSW+=' |'+CMDRunSiminst
-							commands.getoutput(CMDExportSW)
+							CMDExportSW='sh export METASIM_SPATIAL_WINDOW='+str(CurrSW)#+' | export METASIM_SAMPLE_ON=1 | export METASIM_SAMPLE_OFF=0 '
+																
+							SimInst=str(EXE)+'.siminst'
+							CMDRunSiminst='./'+str(SimInst)+' > stdout.txt'
+							EnvFile=open("source_env.sh",'w')
+							
+							#EnvFile.write("\n\t #! /bin/bash")
+							EnvFile.write('\nexport METASIM_SPATIAL_WINDOW='+str(CurrSW))
+							#EnvFile.write('\necho $METASIM_SPATIAL_WINDOW')
+							EnvFile.write('\n\texport METASIM_SAMPLE_ON=1')
+							EnvFile.write('\n\texport METASIM_SAMPLE_OFF=0')
+							EnvFile.write('\n'+str(CMDRunSiminst))
+							EnvFile.write('\n')
+							EnvFile.close()
+
+							subprocess.call(['bash', 'source_env.sh']) #,shell=True)
+							Check=commands.getoutput('echo $METASIM_SPATIAL_WINDOW')
+	
 							SWFile='SW_'+str(CurrSW)+'_'+str(Config)+'.log'
 							CMDRenameSpatial='mv *.spatial '+str(SWFile)
 							commands.getoutput(CMDRenameSpatial)
@@ -246,15 +263,13 @@ def main():
 								if Data:
 									SWStats.write( "\n\t\t "+str(Data.group(1))+"\t\t "+str(Data.group(2))+"\t\t "+str(Data.group(3))+"\t\t "+str( 100* float(Data.group(3)) / TotalAccess )  )
 									MasterSWStats.write( "\n\t\t "+str(Data.group(1))+"\t\t "+str(Data.group(2))+"\t\t "+str(Data.group(3))+"\t\t "+str( 100* float(Data.group(3)) / TotalAccess )  )								
-									#SWStats.write( "\n\t Bin: "+str(Data.group(1))+"\t Range: "+str(Data.group(2))+"\t Count: "+str(Data.group(3))+"\t % "+str( 100* float(Data.group(3)) / TotalAccess )  )
-									#print "\n\t Bin: "+str(Data.group(1))+" Range: "+str(Data.group(2))+" Count: "+str(Data.group(3))+" % "+str( 100* float(Data.group(3)) / TotalAccess ) 
 						
 							SWStats.write("\n\n")		
 							MasterSWStats.write("\n\n")
 						SWStats.close()
 						CMDMvAll='mv *.c SW* *siminst* *jbbinst* BBlist.txt stdout.txt '+str(ConfigFile)+' '+str(EXE)+' '+str(Config)
 						commands.getoutput(CMDMvAll)
-						CMDRmMetaFiles='rm -f *Instructions* LRU*'
+						CMDRmMetaFiles='rm -f *Instructions* LRU* JBBInfo.txt source_env.sh '
 						commands.getoutput(CMDRmMetaFiles)
 						#CMD
 		MasterSWStats.close()
