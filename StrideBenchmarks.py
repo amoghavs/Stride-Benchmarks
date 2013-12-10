@@ -11,6 +11,44 @@ import sys, getopt,re,math
 def usage():
 	print "StrideBenchmarks.py -c/--config file with all the configuration.\n "
 
+def InitIndirArray(A,VarNum,InitExp,ConfigParams,debug):
+
+	ThisLoop=[]
+	tmp=' This is the variable I am using: '+str(A)
+	NumForLoops=ConfigParams['Dims']
+    	LHSindices=''
+    	RHSindices=''
+    
+	
+    	for j in range(NumForLoops):
+    		if(j==NumForLoops-1):
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['maxstride'][VarNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+		else:
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'		
+		
+		TabSpace='\t'
+		for k in range(j):
+			TabSpace+='\t'
+		ThisForLoop=TabSpace+ThisForLoop
+		ThisLoop.append(ThisForLoop)
+		ThisLoop.append(TabSpace+'{')
+		#print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
+		LHSindices+='['+str(ConfigParams['indices'][j])+']'
+
+    	TabSpace=''
+    	for k in range(NumForLoops):
+		TabSpace+='\t'
+    	eqn="\t"+TabSpace+str(A)+LHSindices+' = '+str(InitExp)+';'
+    	#print "\n So, the equation is: "+str(eqn)	
+	ThisLoop.append(eqn)
+    	for k in range(NumForLoops):
+    		TabSpace='' #\t'
+    		for l in range(NumForLoops-k):
+    			TabSpace+="\t"
+	    	ThisLoop.append(TabSpace+'}')
+     
+	return ThisLoop
+
 
 def InitVar(A,VarNum,ConfigParams,debug):
 
@@ -144,12 +182,16 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    for j in range(NumDims):
 		if(j==StrideDim):
 			#LHSindices+='[(int)rand()% '+str(ConfigParams['size'][StrideDim])+']' #'['+str(StrideIndex[k])+']'
-			LHSindices+='['+str(StrideIndex[k])+']'
 			RHSindices+='['+str(StrideIndex[k])+']'
 		else:
-			LHSindices+='['+str(ConfigParams['indices'][j])+']'
 			RHSindices+='['+str(ConfigParams['indices'][j])+']'
 
+	    for j in range(NumDims):
+		if(j==StrideDim):
+			#LHSindices+='[(int)rand()% '+str(ConfigParams['size'][StrideDim])+']' #'['+str(StrideIndex[k])+']'
+			LHSindices+='['+str(ConfigParams['IndirVar'])+str(RHSindices)+']'
+		else:
+			LHSindices+='['+str(ConfigParams['indices'][j])+']'
 		
 		#print "\n\t LHS: "+str(LHSindices)+" RHS: "+str(RHSindices)
 	
@@ -562,7 +604,7 @@ def main(argv):
 				
 			else:
 				VarDecl+=' Var'+str(index)
-				for CurrDim in range(Dims-1):
+				for CurrDim in range(ConfigParams['Dims']-1):
 					VarDecl+='['+str(ConfigParams['size'][CurrDim])+']'
 				VarDecl+='['+str(ConfigParams['size'][ConfigParams['Dims']-1])+' * '+str(ConfigParams['maxstride'][index])+']'
 				ConfigParams['VarDecl'].append(VarDecl)
@@ -608,9 +650,27 @@ def main(argv):
 		Temp=InitVar(CurrVar,VarNum,ConfigParams,debug)	
 		InitLoop.append(Temp)
 		#WriteArray(ThisLoop,WriteFile)	
+	
+	IndirectionVarDecl='\n\t int IndirVar'	
+	for CurrDim in range(ConfigParams['Dims']-1):
+		IndirectionVarDecl+='['+str(ConfigParams['size'][CurrDim])+']'
+	IndirectionVarDecl+='['+str(ConfigParams['size'][ConfigParams['Dims']-1])+' * '+str(ConfigParams['maxstride'][index])+']'
+		#ConfigParams['VarDecl'].append(VarDecl)
+	IndirectionVarDecl+=';'
+	
+ 	LargestStride=0
+ 	for CurrDim in range(ConfigParams['NumVars']):
+ 		if(ConfigParams['maxstride'][LargestStride]<ConfigParams['maxstride'][CurrDim]):
+ 			LargestStride=CurrDim
+ 	
+ 	print "\n\t Indirection variable: "+str(IndirectionVarDecl)+" and Largest-Stride is: "+str(LargestStride)
+	Temp=InitIndirArray('IndirVar',LargestStride,'index0',ConfigParams,debug)	
+	InitLoop.append(Temp) 
  	
 	ThisLoop=[]
 	Comments=[]
+	
+	ConfigParams['IndirVar']='IndirVar';
 	for VarNum in range(ConfigParams['NumVars']):
 		CurrVar='Var'+str(VarNum)
 		CurrDim=ConfigParams['Dims']-1
@@ -626,17 +686,23 @@ def main(argv):
 		
 
 
-	print "\n\t Source file name: "+str(SrcFileName)+"\n"		
+	print "\n\t Source file name: "+str(SrcFileName)+"\n"	
+	
+		
 	
 	WriteArray(LibAlloc,WriteFile)	
+	WriteFile.write(IndirectionVarDecl)
 	for VarNum in range(ConfigParams['NumVars']):
 		WriteArray(ThisLoop[VarNum],WriteFile)
 	
 	WriteArray(InitAlloc,WriteFile)
 	WriteArray(DynAlloc,WriteFile)
+	
 	WriteFile.write("\n\t int Sum=0;")
 	for VarNum in range(ConfigParams['NumVars']):
 		WriteArray(InitLoop[VarNum],WriteFile)	
+	
+	WriteArray(Temp,WriteFile)	 # For IndirectionVar
 	
 	#for VarNum in range(ConfigParams['NumVars']):
 	WriteArray(Comments,WriteFile)	

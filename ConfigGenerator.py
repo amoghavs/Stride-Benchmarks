@@ -231,7 +231,10 @@ def main():
 							Access=re.match(r'\s*.*\:\s*(\d+)+$',GrepOutput)
 							if Access:
 								TotalAccess=int(Access.group(1))
-								#print "\n\t Total Accesses as found out: "+str(TotalAccess)+" and grep output: "+str(GrepOutput)							
+								print "\n\t Total Accesses as found out: "+str(TotalAccess)+" and grep output: "+str(GrepOutput)	
+							else:
+								print "\n\t Total Accesses not found!! \n"
+								sys.exit()
 						
 							f=open(SWFile,'r')
 							SWFileContents=f.readlines()
