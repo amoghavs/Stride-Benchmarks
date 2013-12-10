@@ -57,7 +57,7 @@ def main():
 	Init='index0*10+index0'
 	DS='d'
 	SpatWindow=[8,16,32,64];
-	MbyteSize=24 # 2^28=32Mbyte= 2^20[1M] * 2^5 [32] * 2^3[byte]
+	MbyteSize=12 # 2^28=32Mbyte= 2^20[1M] * 2^5 [32] * 2^3[byte]
 	MaxSize=2**MbyteSize
 	Dim0Size=2**(MbyteSize-8)
 	HigherDimSize= MaxSize/	Dim0Size
@@ -128,17 +128,18 @@ def main():
 					MaxStride=0
 					if Strides:
 						for i in range(len(Strides)-1):
-							#StrideName+=str(Strides[i])+'_'
+							StrideName+=str(Strides[i])+'_'
 							if(MaxStride<int(Strides[i])):
 								MaxStride=int(Strides[i]) # CAUTION: Should change this when NumVars > 1
 							else:
 								print "\n\t We think strides[i]: "+str(Strides[i])+" is lesser than Maxstrides: "+str(MaxStride)
+						StrideName+=str(Strides[len(Strides)-1])
 						if(MaxStride<int(Strides[len(Strides)-1])):
 							MaxStride=int(Strides[len(Strides)-1]) # CAUTION: Should change this when NumVars > 1
 						else:
 							print"\n\t -- Stride: "+str(Strides[len(Strides)-1])+" MaxStride: "+str(MaxStride)
 						
-						StrideName+=str(MaxStride) # CAUTION: Should change this when NumVars > 1
+						#StrideName+=str(MaxStride) # CAUTION: Should change this when NumVars > 1
 						print "\n\t Stride-Name: "+str(StrideName)+' StrideString '+str(StrideString)+" and Maxstride: "+str(MaxStride)
 					else:
 						print "\n\t CurrStreamCombi: "+str(StrideName)+" seems to be corrupted, exitting! "
@@ -146,7 +147,8 @@ def main():
 						
 							
 					for CurrAlloc in Alloc:
-						UniqueID=str(NumVars)+"vars_"+str(CurrAlloc)+'_'+str(NumDims)+"dims_"+str(SizeName)+'_streams_'+str(NumStreams)+'_maxstride_'+str(StrideName)
+						UniqueID=str(NumVars)+"vars_"+str(CurrAlloc)+'_'+str(NumDims)+"dims_"+str(SizeName)+'_streams_'+str(NumStreams)+'_stride_'+str(StrideName)
+						SRCID=str(NumVars)+"vars_"+str(CurrAlloc)+'_'+str(NumDims)+"dims_"+str(SizeName)+'_streams_'+str(NumStreams)+'_maxstride_'+str(MaxStride)
 						Config="Config_"+UniqueID
 						ConfigFile=str(Config)+'.txt'
 
@@ -168,9 +170,9 @@ def main():
 						
 						CMDrunStrideBenchmarks='python StrideBenchmarks.py -c '+str(ConfigFile)
 						commands.getoutput(CMDrunStrideBenchmarks)
-						SRCCode='StrideBenchmarks_'+str(UniqueID)+'.c'
-						EXE='StrideBenchmarks_'+str(UniqueID)
-						print "\n\t Config file: "+str(ConfigFile)#+" source: "+str(SRCCode)+" exe "+str(EXE)						
+						SRCCode='StrideBenchmarks_'+str(SRCID)+'.c'
+						EXE='StrideBenchmarks_'+str(SRCID)
+						print "\n\t Config file: "+str(ConfigFile)+" source: "+str(SRCCode)+" exe "+str(EXE)						
 						CMDCompileSRC='gcc -O3 -g '+str(SRCCode)+' -o '+str(EXE)
 						commands.getoutput(CMDCompileSRC)
 						CMDPebilCompile='pebil --typ jbb --app '+str(EXE)
@@ -215,7 +217,7 @@ def main():
 							SWStats.write("\n\t Spatial-window size: "+str(CurrSW)+"\n\n")
 							MasterSWStats.write("\n\t Spatial-window size: "+str(CurrSW)+"\n\n")
 
-							CMDExportSW='export METASIM_SPATIAL_WINDOW='+str(CurrSW)+' | export METASIM_SAMPLE_ON=1 | export METASIM_SAMPLE_OFF=0 | echo $METASIM_SAMPLE_OFF '
+							CMDExportSW='export METASIM_SPATIAL_WINDOW='+str(CurrSW)+' | export METASIM_SAMPLE_ON=1 | export METASIM_SAMPLE_OFF=0 '
 							SimInst=str(EXE)+'.siminst > stdout.txt'
 							CMDRunSiminst='./'+str(SimInst)
 							CMDExportSW+=' |'+CMDRunSiminst

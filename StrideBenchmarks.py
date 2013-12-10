@@ -117,9 +117,10 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     	ThisLoop.append(IndexDecl)
     for j in range(NumDims):
 		if(j==StrideDim):
+			#RHSindices+='['+str(ConfigParams['indices'][j])+']'
 			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 '+str(IndexInit)+';'+str(ConfigParams['indices'][j])+'<='+str(BoundsForStream[0])+';'+str(IndexIncr)+')'
 		elif(j!=StrideDim):
-			RHSindices+='['+str(ConfigParams['indices'][j])+']'	
+			#RHSindices+='['+str(ConfigParams['indices'][j])+']'	
 			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 		
 		TabSpace='\t'
@@ -137,14 +138,23 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     eqn=''
     for k in range(ConfigParams['NumStreaminDims'][VarNum]):
 	    #eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
+	    LHSindices=''
+	    RHSindices=''
 	    indices=''
 	    for j in range(NumDims):
 		if(j==StrideDim):
-			indices+='['+str(StrideIndex[k])+']'
+			#LHSindices+='[(int)rand()% '+str(ConfigParams['size'][StrideDim])+']' #'['+str(StrideIndex[k])+']'
+			LHSindices+='['+str(StrideIndex[k])+']'
+			RHSindices+='['+str(StrideIndex[k])+']'
 		else:
-			indices+='['+str(ConfigParams['indices'][j])+']'
-			
-	    eqn="\t"+TabSpace+str(A)+indices+' = '+'Sum'+' + '+str(A)+indices+';'
+			LHSindices+='['+str(ConfigParams['indices'][j])+']'
+			RHSindices+='['+str(ConfigParams['indices'][j])+']'
+
+		
+		#print "\n\t LHS: "+str(LHSindices)+" RHS: "+str(RHSindices)
+	
+	    eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
+	    #print "\n\t eqn: "+str(eqn)
 	    if debug:
 	    	print "\n So, the equation is: "+str(eqn)	
     	    ThisLoop.append(eqn)
