@@ -23,9 +23,9 @@ def InitVar(A,VarNum,ConfigParams,debug):
 	
     	for j in range(NumForLoops):
     		if(j==NumForLoops-1):
-			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['stride'][VarNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['maxstride'][VarNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 		else:
-			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'		
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'		
 		
 		TabSpace='\t'
 		for k in range(j):
@@ -71,24 +71,56 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     ThisLoop.append('{')
     ThisLoop.append(str(ConfigParams['indices'][len(ConfigParams['indices'])-1]))
     ThisLoop.append('int AnotherIndex=0;')
-    NumForLoops=ConfigParams['Dims']
+    NumDims=ConfigParams['Dims']
     LHSindices=''
     RHSindices=''
     
-
-    for j in range(NumForLoops):
-
+    if debug:
+    	print "\n\t I need to generate following number of streams: "+str(ConfigParams['NumStreaminDims'][VarNum])
+    LargestIndexNotFound=1
+    IndicesForStream=[]
+    BoundsForStream=[]
+    IndexIncr=''
+    IndexDecl=''
+    StrideIndex=[]
+    IndexInit=''
+    if debug:
+    	print "\n\t Maxstride: "+str(ConfigParams['maxstride'][VarNum]) +' for VarNum: '+str(VarNum)
+    for i in range(ConfigParams['NumStreaminDims'][VarNum]):
+    	if(LargestIndexNotFound and (ConfigParams['StrideinStream'][VarNum][i]==ConfigParams['maxstride'][VarNum]) ):
+	    	LargestIndexNotFound=0
+	    	
+	   	bounds= '( (' + str(ConfigParams['size'][StrideDim]) +' * '+ str(ConfigParams['maxstride'][VarNum] )+' ) - '  + str(ConfigParams['StrideinStream'][VarNum][i])+')'   	
+	   	BoundsForStream.insert(0,str(bounds))
+	   	CurrIndexIncr=str(ConfigParams['indices'][StrideDim])+'+= '+str(ConfigParams['StrideinStream'][VarNum][i])
+	   	IndexIncr=str(CurrIndexIncr)+str(IndexIncr)    	
+	    	if debug:
+	    		print "\n\t The boss is here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)
+	    	StrideIndex.append(str(ConfigParams['indices'][StrideDim]))
+	else:
+	   	index=str('StreamIndex'+str(i))
+	   	IndicesForStream.append(index)
+	   	
+	   	bounds= '( (' + str(ConfigParams['size'][VarNum]) +' * '+ str(ConfigParams['maxstride'][VarNum] )+' ) - '  + str(ConfigParams['StrideinStream'][VarNum][i])+')'      	
+	   	BoundsForStream.append(str(bounds))
+	   	CurrIndexIncr=','+str(index)+'+= '+str(ConfigParams['StrideinStream'][VarNum][i])
+	   	IndexIncr+=CurrIndexIncr
+	   	IndexDecl+=' int '+str(index)+'=0;'
+	   	IndexInit+=','+str(index)+'=0'
+	   	if debug:
+	   		print "\n\t The minnions are here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)
+	   	StrideIndex.append(str(index))
+	   	
+    if debug:
+    	print "\n\t IndexDecl: "+str(IndexDecl)+' Bounds: '+str(BoundsForStream[0])
+    if(ConfigParams['NumStreaminDims'][VarNum] > 1):
+    	ThisLoop.append(IndexDecl)
+    for j in range(NumDims):
 		if(j==StrideDim):
-			#RHSindices+='['+str(ConfigParams['indices'][j])+' +'+str(Stride)+' ]'
-			RHSindices+='['+str(ConfigParams['indices'][j])+' ]'
-			if(Stride>1):
-				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 , AnotherIndex=0 ; '+	str(ConfigParams['indices'][j])+' < '+'( ('+str(ConfigParams['size'][j])+' * '+str(ConfigParams['stride'][VarNum])+') - '+str(Stride) + ') && AnotherIndex < ' +str(ConfigParams['size'][j]) + ' ; ' +str(ConfigParams['indices'][j])+'+= '+str(Stride)+', AnotherIndex++ )'
-			else:
-				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 , AnotherIndex=0 ; '+	str(ConfigParams['indices'][j])+' < '+'( ('+str(ConfigParams['size'][j])+' * '+str(ConfigParams['stride'][VarNum])+') - '+str(Stride) + ') && AnotherIndex < ' +str(ConfigParams['size'][j]) + ' ; ' +str(ConfigParams['indices'][j])+'+= 1'+', AnotherIndex++ )'
-			
-			#print "\n\t Boo yeah: "+str(StrideDim)+ThisForLoop+ "\n"
+			#RHSindices+='['+str(ConfigParams['indices'][j])+']'
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 '+str(IndexInit)+';'+str(ConfigParams['indices'][j])+'<='+str(BoundsForStream[0])+';'+str(IndexIncr)+')'
 		elif(j!=StrideDim):
-			RHSindices+='['+str(ConfigParams['indices'][j])+']'	
+			#RHSindices+='['+str(ConfigParams['indices'][j])+']'	
 			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 		
 		TabSpace='\t'
@@ -97,21 +129,42 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		ThisForLoop=TabSpace+ThisForLoop
 		ThisLoop.append(ThisForLoop)
 		ThisLoop.append(TabSpace+'{')
-		#print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
-		LHSindices+='['+str(ConfigParams['indices'][j])+']'
+
 
     TabSpace=''
-    for k in range(NumForLoops):
+    for k in range(NumDims):
 		TabSpace+='\t'
-    eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
-    #print "\n So, the equation is: "+str(eqn)	
-    ThisLoop.append(eqn)
-    for k in range(NumForLoops):
+    MaxstrideDimNotFound=1	
+    eqn=''
+    for k in range(ConfigParams['NumStreaminDims'][VarNum]):
+	    #eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
+	    LHSindices=''
+	    RHSindices=''
+	    indices=''
+	    for j in range(NumDims):
+		if(j==StrideDim):
+			#LHSindices+='[(int)rand()% '+str(ConfigParams['size'][StrideDim])+']' #'['+str(StrideIndex[k])+']'
+			LHSindices+='['+str(StrideIndex[k])+']'
+			RHSindices+='['+str(StrideIndex[k])+']'
+		else:
+			LHSindices+='['+str(ConfigParams['indices'][j])+']'
+			RHSindices+='['+str(ConfigParams['indices'][j])+']'
+
+		
+		#print "\n\t LHS: "+str(LHSindices)+" RHS: "+str(RHSindices)
+	
+	    eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
+	    #print "\n\t eqn: "+str(eqn)
+	    if debug:
+	    	print "\n So, the equation is: "+str(eqn)	
+    	    ThisLoop.append(eqn)
+    	    
+    for k in range(NumDims):
     	TabSpace='' #\t'
-    	for l in range(NumForLoops-k):
+    	for l in range(NumDims-k):
     		TabSpace+="\t"
     	ThisLoop.append(TabSpace+'}')
-    
+    ThisLoop.append('printf(" ");')
     ThisLoop.append('return ;')
     ThisLoop.append('}')
     return ThisLoop
@@ -155,15 +208,20 @@ def main(argv):
 	# At this point the config should be read completely.
 	ConfigParams={}
 	ConfigParams['size']=[]
-	ConfigParams['stride']=[]
+	ConfigParams['maxstride']=[]
 	ConfigParams['alloc']=[]
 	ConfigParams['datastructure']=[]	
 	ConfigParams['Dims']=''
 	ConfigParams['NumVars']=''
+	ConfigParams['NumStreams']=''
 	ConfigParams['init']=[]	
+	ConfigParams['NumStreaminDims']=[]
+	ConfigParams['StrideinStream']=[]
+	
 	LineCount=0;
 	DimNotFound=1;
 	SizeNotFound=1;
+	NumStreamsNotFound=1;
 	StrideNotFound=1;
 	AllocNotFound=1;
 	DSNotFound=1;
@@ -171,6 +229,9 @@ def main(argv):
 	ThisArray=[]
 	NumVars=0
 	NumVarNotFound=1
+	NumStreamsDimsNotFound=1
+	StrideForAllDimsNotFound=1
+	FoundStrideForDims=0
 	# Tabs: 1
 	for CurrLine in ConfigContents:
 		LineCount+=1;
@@ -198,8 +259,36 @@ def main(argv):
 						print "\n\t Number of variables is "+str(ConfigParams['NumVars'])+"\n"	
 					LineNotProcessed=0
 					NumVarNotFound=0			
-								
+					
+		if NumStreamsDimsNotFound:
+			MatchObj=re.match(r'\s*\#StreamDims',CurrLine)
+			if MatchObj:
+				tmp=re.split(' ',CurrLine)
+				NumStreaminDims=re.split(',',tmp[1])
+				if NumStreaminDims:
+					LineNotProcessed=0
+					CurrDim=0;
+					for CurrStreamDim in NumStreaminDims:
+						CheckSpace=re.match(r'^\s*$',CurrStreamDim)
+					        if(CheckSpace):
+					       		if debug:
+					       			print "\n\t For StreamDim parameter, the input is not in the appropriate format. Please check! \n"
+					       		sys.exit(0)
+					       	else:
+							CurrStreamDim=re.sub(r'^\s*','',CurrStreamDim)
+							CurrStreamDim=re.sub(r'\s*$','',CurrStreamDim)						       	
+							ConfigParams['NumStreaminDims'].append( int(CurrStreamDim))
+							CurrDim+=1				
+							if debug:
+					       			print "\n\t #Streams for dim "+str(CurrDim)+" is "+str(CurrStreamDim)+"\n" 
+					if(CurrDim != ConfigParams['NumVars']):
+						#if debug:
+						print "\n\t The StreamDim parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions speciied is "+str(ConfigParams['Dims'])+"\n";
+						sys.exit(0)
+					else:
+						NumStreamsDimsNotFound=0							
 		else:
+	
 			if SizeNotFound:
 				MatchObj=re.match(r'\s*\#size',CurrLine)
 				if MatchObj:
@@ -222,39 +311,52 @@ def main(argv):
 								if debug:
 						       			print "\n\t Size for dim "+str(CurrDim)+" is "+str(CurrSize)+"\n" 
 						if(CurrDim != ConfigParams['Dims']):
-							if debug:
-								print "\n\t The size parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['Dims'])+"\n";
+							#if debug:
+							print "\n\t The size parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['Dims'])+"\n";
 							sys.exit(0)
 						else:
 							SizeNotFound=0
 
-			if StrideNotFound:
+			if StrideForAllDimsNotFound:
 				MatchObj=re.match(r'\s*\#stride',CurrLine)
 				if MatchObj:
-					tmp=re.split(' ',CurrLine)
-					Strides=re.split(',',tmp[1])
-					if Strides:
-						LineNotProcessed=0
-						CurrDim=0;
-						for CurrStride in Strides:
-							CheckSpace=re.match(r'^\s*$',CurrStride)
-						        if(CheckSpace):
-						       		if debug:
-						       			print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
-						       		sys.exit(0)						
+					FindDim=re.match(r'\s*\#stride(\d+)+',CurrLine)
+					SearchingDim=0
+					if FindDim:
+						if debug:
+							print "\n\t Found this dim: "+str(FindDim.group(1))
+						SearchingDim=int(FindDim.group(1))
+						tmp=re.split(' ',CurrLine)
+						Strides=re.split(',',tmp[1])
+						if Strides:
+							LineNotProcessed=0
+							Count=0;
+							StrideInThisDim=[]
+							for CurrStride in Strides:
+								CheckSpace=re.match(r'^\s*$',CurrStride)
+								if(CheckSpace):
+							       		if debug:
+							       			print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
+							       		sys.exit(0)						
+								else:
+									CurrStride=re.sub(r'^\s*','',CurrStride)
+									CurrStride=re.sub(r'\s*$','',CurrStride)							
+									StrideInThisDim.append(int(CurrStride));
+									Count+=1				
+									if debug:
+							       			print "\n\t Stride for stream "+str(Count) +' in dim '+str(SearchingDim)+" "+str(Count)+" is "+str(CurrStride)+"\n" 
+							if(Count != ConfigParams['NumStreaminDims'][SearchingDim]):
+								print "\n\t The stride parameter is not specified for specified number of streams "+str(ConfigParams['NumStreaminDims'][SearchingDim])+" in dimension "+str(SearchingDim)+", it is specified only for "+str(Count)+ " streams. "
+								sys.exit(0)
 							else:
-								CurrStride=re.sub(r'^\s*','',CurrStride)
-								CurrStride=re.sub(r'\s*$','',CurrStride)							
-								ConfigParams['stride'].append( CurrStride);
-								CurrDim+=1				
-								if debug:
-						       			print "\n\t Stride for dim "+str(CurrDim)+" is "+str(CurrStride)+"\n" 
-						if(CurrDim != ConfigParams['NumVars']):
-							print "\n\t The stride parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['NumVars'])+"\n";
-							sys.exit(0)
-						else:
-							StrideNotFound=0	
-
+								ConfigParams['StrideinStream'].append(StrideInThisDim)
+								FoundStrideForDims+=1
+								if(FoundStrideForDims==ConfigParams['NumVars']):
+									StrideNotFound=0	
+									StrideForAllDimsNotFound=0
+									if debug:
+										print "\n\t Required stride for each stream in each dimension has been found!!! \n"
+							
 			if AllocNotFound:
 				MatchObj=re.match(r'\s*\#alloc',CurrLine)
 				if MatchObj:
@@ -342,11 +444,10 @@ def main(argv):
 			if debug:
 				print "\n\t Info is not processed in line: "+str(LineCount)+"\n";
 		
-		
+	
 	#Tabs: 1		
-	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0)):
-		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions and InitNotFound is"+str(~InitNotFound)	
-
+	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0)):
+		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions "	
 		InitAlloc=[]
 		LibAlloc=[]
 		ConfigParams['indices']=[]
@@ -371,6 +472,18 @@ def main(argv):
 		InitAlloc.append(tmp);	
 		DynAlloc=[]	
 		ConfigParams['VarDecl']=[]	
+		
+		for CurrDim in range(ConfigParams['NumVars']):
+			largest=0
+			for j in range(ConfigParams['NumStreaminDims'][CurrDim]):
+				if(largest < ConfigParams['StrideinStream'][CurrDim][j]):
+					largest=ConfigParams['StrideinStream'][CurrDim][j]
+			ConfigParams['maxstride'].append(largest)
+			if debug:
+				print "\n\t For dim "+str(CurrDim)+" largest stride requested for any stream is "+str(largest)
+		
+		#sys.exit()
+		
 		for index in range(ConfigParams['NumVars']):
 			VarDecl=''
 			datatype=VarDecl
@@ -407,7 +520,7 @@ def main(argv):
 					print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
 				DynAlloc.append(VarDecl)
 				if(Dims==1):
-					tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+'*'+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
+					tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+'*'+str(ConfigParams['maxstride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
 				else:
 					tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * sizeof('+datatype+suffix+'))'+';'
 				
@@ -434,7 +547,7 @@ def main(argv):
 						for CurrDim in range(ConfigParams['Dims']-i-2):
 						   suffix+='*'	
 						if(i==(ConfigParams['Dims']-2)): # Since the loop is going from 0 to ConfigParams['Dims']-2
-							MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * '+str(ConfigParams['stride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
+							MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * '+str(ConfigParams['maxstride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
 						else:
 							MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * sizeof('+datatype+suffix+'))'+';'		
 						DynAlloc.append(MallocEqn)
@@ -444,13 +557,14 @@ def main(argv):
 				for i in range(ConfigParams['Dims']):
 					VarType+='*'
 				ConfigParams['VarDecl'].append(VarType)
-				print "\n\t ConfigParams['VarDecl']: "+VarType
+				if debug:
+					print "\n\t ConfigParams['VarDecl']: "+VarType
 				
 			else:
 				VarDecl+=' Var'+str(index)
 				for CurrDim in range(Dims-1):
 					VarDecl+='['+str(ConfigParams['size'][CurrDim])+']'
-				VarDecl+='['+str(ConfigParams['size'][ConfigParams['Dims']-1])+' * '+str(ConfigParams['stride'][index])+']'
+				VarDecl+='['+str(ConfigParams['size'][ConfigParams['Dims']-1])+' * '+str(ConfigParams['maxstride'][index])+']'
 				ConfigParams['VarDecl'].append(VarDecl)
 				VarDecl+=';'
 				if debug:
@@ -468,20 +582,24 @@ def main(argv):
 		
 		StrideString=''
 		for i in range(ConfigParams['NumVars']-1):
-			StrideString+=str(ConfigParams['stride'][i])+'_'
-		StrideString+=str(ConfigParams['stride'][ConfigParams['NumVars']-1])
+			StrideString+=str(ConfigParams['maxstride'][i])+'_'
+		StrideString+=str(ConfigParams['maxstride'][ConfigParams['NumVars']-1])
 		alloc_str=''
 		for CurrAlloc in ConfigParams['alloc']:
 			alloc_str+=str(CurrAlloc)
+			
+		StreamString=''
+		for i in range(ConfigParams['NumVars']-1):
+			StreamString+=str(ConfigParams['NumStreaminDims'][i])+'_'
+		
+		StreamString+=str(ConfigParams['NumStreaminDims'][ConfigParams['NumVars']-1])
 					
-		
-		
-
-						
+ 						
 	else:
-		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "		#sys.exit(0)
+		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "
+		sys.exit(0)
 	
-	SrcFileName='StrideBenchmarks_'+str(ConfigParams['NumVars'])+"vars_"+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_'+str(StrideString)+'stride.c'
+	SrcFileName='StrideBenchmarks_'+str(ConfigParams['NumVars'])+"vars_"+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_streams_'+str(StreamString)+'_maxstride_'+str(StrideString)+'.c'
 	WriteFile=open(SrcFileName,'w')	
 		
 	InitLoop=[]
@@ -496,7 +614,7 @@ def main(argv):
 	for VarNum in range(ConfigParams['NumVars']):
 		CurrVar='Var'+str(VarNum)
 		CurrDim=ConfigParams['Dims']-1
-		UseStride=ConfigParams['stride'][VarNum]
+		UseStride=ConfigParams['maxstride'][VarNum]
 		#WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )	
 		ThisLoopComment="\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim)			
 		Comments.append(ThisLoopComment)
@@ -520,8 +638,8 @@ def main(argv):
 	for VarNum in range(ConfigParams['NumVars']):
 		WriteArray(InitLoop[VarNum],WriteFile)	
 	
-#	for VarNum in range(ConfigParams['NumVars']):
-		WriteArray(Comments,WriteFile)	
+	#for VarNum in range(ConfigParams['NumVars']):
+	WriteArray(Comments,WriteFile)	
 
 
 	
