@@ -658,13 +658,23 @@ def main(argv):
 		#ConfigParams['VarDecl'].append(VarDecl)
 	IndirectionVarDecl+=';'
 	
- 	LargestStride=0
+ 	LargestStrideDim=0
+	LargestStride=0
+	SmallestSize=10**49
  	for CurrDim in range(ConfigParams['NumVars']):
- 		if(ConfigParams['maxstride'][LargestStride]<ConfigParams['maxstride'][CurrDim]):
- 			LargestStride=CurrDim
- 	
- 	print "\n\t Indirection variable: "+str(IndirectionVarDecl)+" and Largest-Stride is: "+str(LargestStride)
-	Temp=InitIndirArray('IndirVar',LargestStride,'index0',ConfigParams,debug)	
+ 		if( int(ConfigParams['maxstride'][LargestStrideDim])< int(ConfigParams['maxstride'][CurrDim]) ):
+ 			LargestStrideDim=CurrDim
+			LargestStride=ConfigParams['maxstride'][CurrDim]
+			print "\n\t Lagest stride: "+str(LargestStride)+" in dim: "+str(LargestStrideDim)	
+	for CurrDim in range(ConfigParams['Dims']):
+		print "\n\t Small: "+str(SmallestSize)+" Dim-size: "+str(ConfigParams['size'][CurrDim])
+		if( int(SmallestSize) > int(ConfigParams['size'][CurrDim])):
+			SmallestSize=ConfigParams['size'][CurrDim]
+ 
+	InitExp='(int) rand()% '+str(SmallestSize)
+	InitExp='(int) rand()% '+str(ConfigParams['size'][ConfigParams['Dims']-1]) # CAUTION: This is done assuming only last dimension is strided. If not, above line should be used instead of this one!	
+ 	print "\n\t Indirection variable: "+str(IndirectionVarDecl)+" and Largest-Stride dim is: "+str(LargestStrideDim)+" Smallest size is "+str(SmallestSize)+" InitExp: "+str(InitExp)
+	Temp=InitIndirArray('IndirVar',LargestStrideDim,InitExp,ConfigParams,debug)	
 	InitLoop.append(Temp) 
  	
 	ThisLoop=[]

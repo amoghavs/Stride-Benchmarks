@@ -49,8 +49,8 @@ def main():
 	Min['Vars']=1
 	Max['Dims']=2
 	Min['Dims']=2
-	Max['NumStream']=2
-	Min['NumStream']=2
+	Max['NumStream']=3
+	Min['NumStream']=3
 	Max['Stride']=3 # ie., 2^4
 	Min['Stride']=0 # ie., 2^0=1
 	Alloc=['s']	
@@ -231,7 +231,7 @@ def main():
 							Access=re.match(r'\s*.*\:\s*(\d+)+$',GrepOutput)
 							if Access:
 								TotalAccess=int(Access.group(1))
-								print "\n\t Total Accesses as found out: "+str(TotalAccess)+" and grep output: "+str(GrepOutput)	
+								#print "\n\t Total Accesses as found out: "+str(TotalAccess)+" and grep output: "+str(GrepOutput)	
 							else:
 								print "\n\t Total Accesses not found!! \n"
 								sys.exit()
