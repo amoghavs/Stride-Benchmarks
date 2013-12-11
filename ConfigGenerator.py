@@ -52,18 +52,19 @@ def main():
 	Min['Dims']=2
 	Max['NumStream']=1
 	Min['NumStream']=1
-	Max['Stride']=1 # ie., 2^4
+	Max['Stride']=3 # ie., 2^4
 	Min['Stride']=0 # ie., 2^0=1
-	Alloc=['d']	
+	Alloc=['s']	
 	Init='index0*10+index0'
-	DS='i'
+	DS='d'
 	SpatWindow=[8,16,32];
 	MbyteSize=20 # 2^28=32Mbyte= 2^20[1M] * 2^5 [32] * 2^3[byte]
 	MaxSize=2**MbyteSize
 	Dim0Size=2**(MbyteSize-8)
 	HigherDimSize= MaxSize/	Dim0Size
 	
-	MasterSWStats=open("MasterSWStats.txt",'w')
+	MasterSWStatsFile='MasterSWStats_Double_Static.txt'
+	MasterSWStats=open(MasterSWStatsFile,'w')
 	for NumVars in range(Min['Vars'],Max['Vars']+1):
 	 # CAUTION: The main loop iterates for 'NumVars' and the config generator should be changed to accommodate #Vars > 1 and not loop over like this! 
 	 

@@ -101,14 +101,14 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     if debug:	
 	    print "\n\t In StrideLoop: Variable: "+str(A)+" dimension: "+str(StrideDim)+" and requested stride is "+str(Stride)
 	    
-    FuncName=' Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+str(A)+','+str(Stride)+',Sum'+');'	    
+    FuncName='Sum=Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+str(A)+','+str(Stride)+',Sum'+');'	    
     ThisLoop=[]
     ThisLoop.append('Sum=2;')
     ThisLoop.append(FuncName)
     if(ConfigParams['alloc'][VarNum]=='d' or ConfigParams['alloc'][VarNum]=='dynamic'):
-	    FuncDecl='void Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+ConfigParams['VarDecl'][VarNum]+' '+str(A)+',int Stride, int Sum )'
+	    FuncDecl='int Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+ConfigParams['VarDecl'][VarNum]+' '+str(A)+',int Stride, int Sum )'
     else:
-    	    FuncDecl='void Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+ConfigParams['VarDecl'][VarNum]+' '+',int Stride, int Sum )'
+    	    FuncDecl='int Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+ConfigParams['VarDecl'][VarNum]+' '+',int Stride, int Sum )'
     ThisLoop.append(FuncDecl)
     ThisLoop.append('{')
     ThisLoop.append(str(ConfigParams['indices'][len(ConfigParams['indices'])-1]))
@@ -183,13 +183,13 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    LHSindices=''
 	    RHSindices=''
 	    indices=''
-	    for j in range(NumDims):
+	    """for j in range(NumDims):
 		if(j==StrideDim):
 			#LHSindices+='[(int)rand()% '+str(ConfigParams['size'][StrideDim])+']' #'['+str(StrideIndex[k])+']'
 			RHSindices+='['+str(StrideIndex[k])+']'
 		else:
 			RHSindices+='['+str(ConfigParams['indices'][j])+']'
-
+	    """	
 	    for j in range(NumDims):
 		if(j==StrideDim):
 			#LHSindices+='[(int)rand()% '+str(ConfigParams['size'][StrideDim])+']' #'['+str(StrideIndex[k])+']'
@@ -199,7 +199,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		
 		#print "\n\t LHS: "+str(LHSindices)+" RHS: "+str(RHSindices)
 	
-	    eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
+	    eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+LHSindices+';'
+	    #eqn="\t"+TabSpace+'Sum+='+str(A)+LHSindices+';'
 	    #print "\n\t eqn: "+str(eqn)
 	    if debug:
 	    	print "\n So, the equation is: "+str(eqn)	
@@ -211,7 +212,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     		TabSpace+="\t"
     	ThisLoop.append(TabSpace+'}')
     ThisLoop.append('printf(" ");')
-    ThisLoop.append('return ;')
+    ThisLoop.append('return Sum;')
     ThisLoop.append('}')
     return ThisLoop
 
