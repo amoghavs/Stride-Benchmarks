@@ -11,41 +11,45 @@ import sys, getopt,re,math
 def usage():
 	print "StrideBenchmarks.py -c/--config file with all the configuration.\n "
 
+# CAUTION: Following subrotuine is written/modified to work only for the last dimension.
 def InitIndirArray(A,VarNum,InitExp,ConfigParams,debug):
 
 	ThisLoop=[]
-	tmp=' This is the variable I am using: '+str(A)
+	#tmp=' This is the variable I am using: '+str(A)
 	NumForLoops=ConfigParams['Dims']
     	LHSindices=''
     	RHSindices=''
     
-	
-    	for j in range(NumForLoops):
-    		if(j==NumForLoops-1):
-			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['maxstride'][VarNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
-		else:
-			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'		
+	ThisForLoop=''
+    	#for j in range(NumForLoops):
+    	#	if(j==NumForLoops-1): # If you need to loop over, remove commented code and tab the for loop-code-gen twice
+    	j=NumForLoops-1
+	ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['maxstride'][VarNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+		#else:
+		#	ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'		
 		
-		TabSpace='\t'
-		for k in range(j):
-			TabSpace+='\t'
-		ThisForLoop=TabSpace+ThisForLoop
-		ThisLoop.append(ThisForLoop)
-		ThisLoop.append(TabSpace+'{')
-		#print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
-		LHSindices+='['+str(ConfigParams['indices'][j])+']'
 
-    	TabSpace=''
-    	for k in range(NumForLoops):
-		TabSpace+='\t'
+	# If you need to loop over, remove commented code refer to below methods in case something does not work
+	TabSpace='\t'
+	#for k in range(j):
+		#TabSpace+='\t'
+	ThisForLoop=TabSpace+ThisForLoop
+	ThisLoop.append(ThisForLoop)
+	ThisLoop.append(TabSpace+'{')
+	#print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
+	LHSindices+='['+str(ConfigParams['indices'][NumForLoops-1])+']'
+
+    	TabSpace='\t'
+    	#for k in range(NumForLoops):
+	#	TabSpace+='\t'
     	eqn="\t"+TabSpace+str(A)+LHSindices+' = '+str(InitExp)+';'
     	#print "\n So, the equation is: "+str(eqn)	
 	ThisLoop.append(eqn)
-    	for k in range(NumForLoops):
-    		TabSpace='' #\t'
-    		for l in range(NumForLoops-k):
-    			TabSpace+="\t"
-	    	ThisLoop.append(TabSpace+'}')
+    	#for k in range(NumForLoops):
+    	TabSpace='' #\t'
+    	#for l in range(NumForLoops-k):
+    	TabSpace+="\t"
+	ThisLoop.append(TabSpace+'}')
      
 	return ThisLoop
 
@@ -114,7 +118,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     RHSindices=''
     
     if debug:
-    	print "\n\t I need to generate following number of streams: "+str(ConfigParams['NumStreaminDims'][VarNum])
+    	print "\n\t I need to generate following number of streams: "+str(ConfigParams['NumStreaminVar'][VarNum])
     LargestIndexNotFound=1
     IndicesForStream=[]
     BoundsForStream=[]
@@ -124,7 +128,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     IndexInit=''
     if debug:
     	print "\n\t Maxstride: "+str(ConfigParams['maxstride'][VarNum]) +' for VarNum: '+str(VarNum)
-    for i in range(ConfigParams['NumStreaminDims'][VarNum]):
+    for i in range(ConfigParams['NumStreaminVar'][VarNum]):
     	if(LargestIndexNotFound and (ConfigParams['StrideinStream'][VarNum][i]==ConfigParams['maxstride'][VarNum]) ):
 	    	LargestIndexNotFound=0
 	    	
@@ -151,12 +155,12 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	   	
     if debug:
     	print "\n\t IndexDecl: "+str(IndexDecl)+' Bounds: '+str(BoundsForStream[0])
-    if(ConfigParams['NumStreaminDims'][VarNum] > 1):
+    if(ConfigParams['NumStreaminVar'][VarNum] > 1):
     	ThisLoop.append(IndexDecl)
     for j in range(NumDims):
 		if(j==StrideDim):
-			#RHSindices+='['+str(ConfigParams['indices'][j])+']'
-			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 '+str(IndexInit)+';'+str(ConfigParams['indices'][j])+'<='+str(BoundsForStream[0])+';'+str(IndexIncr)+')'
+		#	ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 '+str(IndexInit)+';'+str(ConfigParams['indices'][j])+'<='+str(BoundsForStream[0])+';'+str(IndexIncr)+')'
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ;'+str(ConfigParams['indices'][j])+'<='+str(BoundsForStream[0])+';'+str(ConfigParams['indices'][j])+'+=1)'
 		elif(j!=StrideDim):
 			#RHSindices+='['+str(ConfigParams['indices'][j])+']'	
 			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
@@ -174,7 +178,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		TabSpace+='\t'
     MaxstrideDimNotFound=1	
     eqn=''
-    for k in range(ConfigParams['NumStreaminDims'][VarNum]):
+    for k in range(ConfigParams['NumStreaminVar'][VarNum]):
 	    #eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
 	    LHSindices=''
 	    RHSindices=''
@@ -189,7 +193,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    for j in range(NumDims):
 		if(j==StrideDim):
 			#LHSindices+='[(int)rand()% '+str(ConfigParams['size'][StrideDim])+']' #'['+str(StrideIndex[k])+']'
-			LHSindices+='['+str(ConfigParams['IndirVar'])+str(RHSindices)+']'
+			LHSindices+='['+str(ConfigParams['IndirVar'][VarNum][k])+'['+str(ConfigParams['indices'][j])+'] ]'
 		else:
 			LHSindices+='['+str(ConfigParams['indices'][j])+']'
 		
@@ -257,7 +261,7 @@ def main(argv):
 	ConfigParams['NumVars']=''
 	ConfigParams['NumStreams']=''
 	ConfigParams['init']=[]	
-	ConfigParams['NumStreaminDims']=[]
+	ConfigParams['NumStreaminVar']=[]
 	ConfigParams['StrideinStream']=[]
 	
 	LineCount=0;
@@ -306,11 +310,11 @@ def main(argv):
 			MatchObj=re.match(r'\s*\#StreamDims',CurrLine)
 			if MatchObj:
 				tmp=re.split(' ',CurrLine)
-				NumStreaminDims=re.split(',',tmp[1])
-				if NumStreaminDims:
+				NumStreaminVar=re.split(',',tmp[1])
+				if NumStreaminVar:
 					LineNotProcessed=0
 					CurrDim=0;
-					for CurrStreamDim in NumStreaminDims:
+					for CurrStreamDim in NumStreaminVar:
 						CheckSpace=re.match(r'^\s*$',CurrStreamDim)
 					        if(CheckSpace):
 					       		if debug:
@@ -319,7 +323,7 @@ def main(argv):
 					       	else:
 							CurrStreamDim=re.sub(r'^\s*','',CurrStreamDim)
 							CurrStreamDim=re.sub(r'\s*$','',CurrStreamDim)						       	
-							ConfigParams['NumStreaminDims'].append( int(CurrStreamDim))
+							ConfigParams['NumStreaminVar'].append( int(CurrStreamDim))
 							CurrDim+=1				
 							if debug:
 					       			print "\n\t #Streams for dim "+str(CurrDim)+" is "+str(CurrStreamDim)+"\n" 
@@ -387,8 +391,8 @@ def main(argv):
 									Count+=1				
 									if debug:
 							       			print "\n\t Stride for stream "+str(Count) +' in dim '+str(SearchingDim)+" "+str(Count)+" is "+str(CurrStride)+"\n" 
-							if(Count != ConfigParams['NumStreaminDims'][SearchingDim]):
-								print "\n\t The stride parameter is not specified for specified number of streams "+str(ConfigParams['NumStreaminDims'][SearchingDim])+" in dimension "+str(SearchingDim)+", it is specified only for "+str(Count)+ " streams. "
+							if(Count != ConfigParams['NumStreaminVar'][SearchingDim]):
+								print "\n\t The stride parameter is not specified for specified number of streams "+str(ConfigParams['NumStreaminVar'][SearchingDim])+" in dimension "+str(SearchingDim)+", it is specified only for "+str(Count)+ " streams. "
 								sys.exit(0)
 							else:
 								ConfigParams['StrideinStream'].append(StrideInThisDim)
@@ -515,14 +519,14 @@ def main(argv):
 		DynAlloc=[]	
 		ConfigParams['VarDecl']=[]	
 		
-		for CurrDim in range(ConfigParams['NumVars']):
+		for CurrVar in range(ConfigParams['NumVars']):
 			largest=0
-			for j in range(ConfigParams['NumStreaminDims'][CurrDim]):
-				if(largest < ConfigParams['StrideinStream'][CurrDim][j]):
-					largest=ConfigParams['StrideinStream'][CurrDim][j]
+			for j in range(ConfigParams['NumStreaminVar'][CurrVar]):
+				if(largest < ConfigParams['StrideinStream'][CurrVar][j]):
+					largest=ConfigParams['StrideinStream'][CurrVar][j]
 			ConfigParams['maxstride'].append(largest)
 			if debug:
-				print "\n\t For dim "+str(CurrDim)+" largest stride requested for any stream is "+str(largest)
+				print "\n\t For dim "+str(CurrVar)+" largest stride requested for any stream is "+str(largest)
 		
 		#sys.exit()
 		
@@ -632,9 +636,9 @@ def main(argv):
 			
 		StreamString=''
 		for i in range(ConfigParams['NumVars']-1):
-			StreamString+=str(ConfigParams['NumStreaminDims'][i])+'_'
+			StreamString+=str(ConfigParams['NumStreaminVar'][i])+'_'
 		
-		StreamString+=str(ConfigParams['NumStreaminDims'][ConfigParams['NumVars']-1])
+		StreamString+=str(ConfigParams['NumStreaminVar'][ConfigParams['NumVars']-1])
 					
  						
 	else:
@@ -650,50 +654,57 @@ def main(argv):
 		Temp=InitVar(CurrVar,VarNum,ConfigParams,debug)	
 		InitLoop.append(Temp)
 		#WriteArray(ThisLoop,WriteFile)	
+		
+	ConfigParams['IndirVar']=[];	
+	for VarNum in range(ConfigParams['NumVars']):
+		IndirVars=[]
+		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
+			IndirectionVar='Indir_Var'+str(VarNum)+'_Stream'+str(CurrStream)
+			IndirectionVarDecl='\n\t int '+str(IndirectionVar)	
+			#for CurrDim in range(ConfigParams['Dims']-1):
+				#IndirectionVarDecl+='['+str(ConfigParams['size'][CurrDim])+']'
+			IndirectionVarDecl+='['+str(ConfigParams['size'][ConfigParams['Dims']-1])+' * '+str(ConfigParams['maxstride'][index])+']'
+				#ConfigParams['VarDecl'].append(VarDecl)
+			IndirectionVarDecl+=';'
 	
-	IndirectionVarDecl='\n\t int IndirVar'	
-	for CurrDim in range(ConfigParams['Dims']-1):
-		IndirectionVarDecl+='['+str(ConfigParams['size'][CurrDim])+']'
-	IndirectionVarDecl+='['+str(ConfigParams['size'][ConfigParams['Dims']-1])+' * '+str(ConfigParams['maxstride'][index])+']'
-		#ConfigParams['VarDecl'].append(VarDecl)
-	IndirectionVarDecl+=';'
-	
- 	LargestStrideDim=0
-	LargestStride=0
-	SmallestSize=10**49
- 	for CurrDim in range(ConfigParams['NumVars']):
- 		if( int(ConfigParams['maxstride'][LargestStrideDim])< int(ConfigParams['maxstride'][CurrDim]) ):
- 			LargestStrideDim=CurrDim
-			LargestStride=ConfigParams['maxstride'][CurrDim]
-			print "\n\t Lagest stride: "+str(LargestStride)+" in dim: "+str(LargestStrideDim)	
-	for CurrDim in range(ConfigParams['Dims']):
-		print "\n\t Small: "+str(SmallestSize)+" Dim-size: "+str(ConfigParams['size'][CurrDim])
-		if( int(SmallestSize) > int(ConfigParams['size'][CurrDim])):
-			SmallestSize=ConfigParams['size'][CurrDim]
- 
-	InitExp='(int) rand()% '+str(SmallestSize)
-	InitExp='(int) rand()% '+str(ConfigParams['size'][ConfigParams['Dims']-1]) # CAUTION: This is done assuming only last dimension is strided. If not, above line should be used instead of this one!	
- 	print "\n\t Indirection variable: "+str(IndirectionVarDecl)+" and Largest-Stride dim is: "+str(LargestStrideDim)+" Smallest size is "+str(SmallestSize)+" InitExp: "+str(InitExp)
-	Temp=InitIndirArray('IndirVar',LargestStrideDim,InitExp,ConfigParams,debug)	
-	InitLoop.append(Temp) 
+		 	LargestStrideDim=0
+			LargestStride=0
+			SmallestSize=10**49
+		 	for CurrDim in range(ConfigParams['NumVars']):
+		 		if( int(ConfigParams['maxstride'][LargestStrideDim])< int(ConfigParams['maxstride'][CurrDim]) ):
+		 			LargestStrideDim=CurrDim
+					LargestStride=ConfigParams['maxstride'][CurrDim]
+					#print "\n\t Lagest stride: "+str(LargestStride)+" in dim: "+str(LargestStrideDim)	
+
+			for CurrDim in range(ConfigParams['Dims']):
+				#print "\n\t Small: "+str(SmallestSize)+" Dim-size: "+str(ConfigParams['size'][CurrDim])
+				if( int(SmallestSize) > int(ConfigParams['size'][CurrDim])):
+					SmallestSize=ConfigParams['size'][CurrDim]
+		 
+			InitExp='(int) rand()% '+str(SmallestSize)
+			InitExp='(int) rand()% '+str(ConfigParams['size'][ConfigParams['Dims']-1]) # CAUTION: This is done assuming only last dimension is strided. If not, above line should be used instead of this one!	
+		 	InitExp=str(ConfigParams['indices'][ConfigParams['Dims']-1])+' * '+str(ConfigParams['StrideinStream'][VarNum][CurrStream])
+		 	print "\n\t Indirection variable: "+str(IndirectionVarDecl)+" and Largest-Stride dim is: "+str(LargestStrideDim)+" Smallest size is "+str(SmallestSize)+" InitExp: "+str(InitExp)
+		 	LibAlloc.append(IndirectionVarDecl);
+		 	Temp=[]
+			Temp=InitIndirArray(IndirectionVar,LargestStrideDim,InitExp,ConfigParams,debug)	
+			InitLoop.append(Temp)
+			IndirVars.append(IndirectionVar)
+		ConfigParams['IndirVar'].append(IndirVars) 
  	
 	ThisLoop=[]
 	Comments=[]
 	
-	ConfigParams['IndirVar']='IndirVar';
+	
 	for VarNum in range(ConfigParams['NumVars']):
 		CurrVar='Var'+str(VarNum)
 		CurrDim=ConfigParams['Dims']-1
 		UseStride=ConfigParams['maxstride'][VarNum]
-		#WriteFile.write("\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim) )	
 		ThisLoopComment="\n\t // The following loop should have stride "+str(UseStride)+" for variable "+str(CurrVar)+" in dimension "+str(CurrDim)			
 		Comments.append(ThisLoopComment)
 		ThisLoop.append(StridedLoopInFunction(UseStride,CurrDim,CurrVar,VarNum,ConfigParams,debug))
-		#Comments.append('//')
 		Comments.append(ThisLoop[VarNum].pop(0))
 		Comments.append(ThisLoop[VarNum].pop(0))
-		#WriteArray(ThisLoop,WriteFile)	
-		
 
 
 	print "\n\t Source file name: "+str(SrcFileName)+"\n"	
@@ -701,7 +712,7 @@ def main(argv):
 		
 	
 	WriteArray(LibAlloc,WriteFile)	
-	WriteFile.write(IndirectionVarDecl)
+	#WriteFile.write(IndirectionVarDecl)
 	for VarNum in range(ConfigParams['NumVars']):
 		WriteArray(ThisLoop[VarNum],WriteFile)
 	
@@ -710,9 +721,13 @@ def main(argv):
 	
 	WriteFile.write("\n\t int Sum=0;")
 	for VarNum in range(ConfigParams['NumVars']):
-		WriteArray(InitLoop[VarNum],WriteFile)	
+		WriteArray(InitLoop.pop(0),WriteFile)	
 	
-	WriteArray(Temp,WriteFile)	 # For IndirectionVar
+	for VarNum in range(ConfigParams['NumVars']):
+		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
+			WriteArray(InitLoop.pop(0),WriteFile)	 # For IndirectionVar
+				
+		
 	
 	#for VarNum in range(ConfigParams['NumVars']):
 	WriteArray(Comments,WriteFile)	
