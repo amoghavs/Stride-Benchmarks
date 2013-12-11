@@ -129,7 +129,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     
     if debug:
     	print "\n\t Maxstride: "+str(ConfigParams['maxstride'][VarNum]) +' for VarNum: '+str(VarNum)
-    bounds= '( (' + str(ConfigParams['size'][StrideDim]) +' * '+ str(ConfigParams['maxstride'][VarNum] )+' ) - '  + str(ConfigParams['maxstride'][VarNum])+')'
+    bounds= '(' + str(ConfigParams['size'][StrideDim]) +' - '  + str(ConfigParams['maxstride'][VarNum])+')'
     BoundsForStream.insert(0,str(bounds))    	
     
     """for i in range(ConfigParams['NumStreaminVar'][VarNum]):
@@ -187,12 +187,12 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    LHSindices=''
 	    RHSindices=''
 	    indices=''
-	    for j in range(NumDims):
+	    #for j in range(NumDims):
 		#if(j==StrideDim):
 			#LHSindices+='[(int)rand()% '+str(ConfigParams['size'][StrideDim])+']' #'['+str(StrideIndex[k])+']'
 		#	RHSindices+='['+str(StrideIndex[k])+']'
 		#else:
-			RHSindices+='['+str(ConfigParams['indices'][j])+']'
+		#	RHSindices+='['+str(ConfigParams['indices'][j])+']'
 
 	    for j in range(NumDims):
 		if(j==StrideDim):
@@ -203,7 +203,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		
 		#print "\n\t LHS: "+str(LHSindices)+" RHS: "+str(RHSindices)
 	
-	    eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
+	    #eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+LHSindices+';'
+	    eqn="\t"+TabSpace+'Sum+='+str(A)+LHSindices+';'
 	    #print "\n\t eqn: "+str(eqn)
 	    if debug:
 	    	print "\n So, the equation is: "+str(eqn)	
@@ -688,7 +689,7 @@ def main(argv):
 			InitExp='(int) rand()% '+str(SmallestSize)
 			InitExp='(int) rand()% '+str(ConfigParams['size'][ConfigParams['Dims']-1]) # CAUTION: This is done assuming only last dimension is strided. If not, above line should be used instead of this one!	
 		 	InitExp=str(ConfigParams['indices'][ConfigParams['Dims']-1])+' * '+str(ConfigParams['StrideinStream'][VarNum][CurrStream])
-		 	print "\n\t Indirection variable: "+str(IndirectionVarDecl)+" and Largest-Stride dim is: "+str(LargestStrideDim)+" Smallest size is "+str(SmallestSize)+" InitExp: "+str(InitExp)
+		 	#print "\n\t Indirection variable: "+str(IndirectionVarDecl)+" and Largest-Stride dim is: "+str(LargestStrideDim)+" Smallest size is "+str(SmallestSize)+" InitExp: "+str(InitExp)
 		 	LibAlloc.append(IndirectionVarDecl);
 		 	Temp=[]
 			Temp=InitIndirArray(IndirectionVar,LargestStrideDim,InitExp,ConfigParams,debug)	
