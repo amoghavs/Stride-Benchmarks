@@ -126,9 +126,13 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     IndexDecl=''
     StrideIndex=[]
     IndexInit=''
+    
     if debug:
     	print "\n\t Maxstride: "+str(ConfigParams['maxstride'][VarNum]) +' for VarNum: '+str(VarNum)
-    for i in range(ConfigParams['NumStreaminVar'][VarNum]):
+    bounds= '( (' + str(ConfigParams['size'][StrideDim]) +' * '+ str(ConfigParams['maxstride'][VarNum] )+' ) - '  + str(ConfigParams['maxstride'][VarNum])+')'
+    BoundsForStream.insert(0,str(bounds))    	
+    
+    """for i in range(ConfigParams['NumStreaminVar'][VarNum]):
     	if(LargestIndexNotFound and (ConfigParams['StrideinStream'][VarNum][i]==ConfigParams['maxstride'][VarNum]) ):
 	    	LargestIndexNotFound=0
 	    	
@@ -152,7 +156,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	   	if debug:
 	   		print "\n\t The minnions are here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)
 	   	StrideIndex.append(str(index))
-	   	
+    """	   	
     if debug:
     	print "\n\t IndexDecl: "+str(IndexDecl)+' Bounds: '+str(BoundsForStream[0])
     if(ConfigParams['NumStreaminVar'][VarNum] > 1):
@@ -184,10 +188,10 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    RHSindices=''
 	    indices=''
 	    for j in range(NumDims):
-		if(j==StrideDim):
+		#if(j==StrideDim):
 			#LHSindices+='[(int)rand()% '+str(ConfigParams['size'][StrideDim])+']' #'['+str(StrideIndex[k])+']'
-			RHSindices+='['+str(StrideIndex[k])+']'
-		else:
+		#	RHSindices+='['+str(StrideIndex[k])+']'
+		#else:
 			RHSindices+='['+str(ConfigParams['indices'][j])+']'
 
 	    for j in range(NumDims):
