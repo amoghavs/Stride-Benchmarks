@@ -1,4 +1,4 @@
-#!/usr/bin/python
+ #!/usr/bin/python
 
 #### Pending items:
 # * To allocate stride*limit number of elements. -  Done
@@ -9,10 +9,10 @@ import sys, getopt,re,math
 
 
 def usage():
-	print "StrideBenchmarks.py -c/--config file with all the configuration.\n "
+	print "\n\t Usage: StrideBenchmarks.py -c/--config -d \n\t\t -c: file with all the configuration.\n\t\t -d: Debug option, 1 for printing debug messages and 0 to forego printing debug statements. \n "
 
 
-def InitVar(A,VarNum,ConfigParams,debug):
+def InitVar(A,VarNum,StreamNum,ConfigParams,debug):
 
 	ThisLoop=[]
 	tmp=' This is the variable I am using: '+str(A)
@@ -23,7 +23,7 @@ def InitVar(A,VarNum,ConfigParams,debug):
 	
     	for j in range(NumForLoops):
     		if(j==NumForLoops-1):
-			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['maxstride'][VarNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['StrideinStream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 		else:
 			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'		
 		
@@ -59,14 +59,22 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     if debug:	
 	    print "\n\t In StrideLoop: Variable: "+str(A)+" dimension: "+str(StrideDim)+" and requested stride is "+str(Stride)
 	    
-    FuncName=' Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+str(A)+','+str(Stride)+',Sum'+');'	    
+
+    VarFuncDeclString=''
+    VarDeclString=''
+    for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
+    	VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream]+','
+    	VarDeclString+='Var'+str(VarNum)+'_Stream'+str(CurrStream)+','
+ 
+    FuncName=' Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarDeclString+str(Stride)+',Sum'+');'	    
     ThisLoop=[]
     ThisLoop.append('Sum=2;')
-    ThisLoop.append(FuncName)
+    ThisLoop.append(FuncName) 
+    
     if(ConfigParams['alloc'][VarNum]=='d' or ConfigParams['alloc'][VarNum]=='dynamic'):
-	    FuncDecl='void Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+ConfigParams['VarDecl'][VarNum]+' '+str(A)+',int Stride, int Sum )'
+	    FuncDecl='void Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarFuncDeclString+' int Stride, int Sum )'
     else:
-    	    FuncDecl='void Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+ConfigParams['VarDecl'][VarNum]+' '+',int Stride, int Sum )'
+    	    FuncDecl='void Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarFuncDeclString+' int Stride, int Sum )'
     ThisLoop.append(FuncDecl)
     ThisLoop.append('{')
     ThisLoop.append(str(ConfigParams['indices'][len(ConfigParams['indices'])-1]))
@@ -76,7 +84,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     RHSindices=''
     
     if debug:
-    	print "\n\t I need to generate following number of streams: "+str(ConfigParams['NumStreaminDims'][VarNum])
+    	print "\n\t I need to generate following number of streams: "+str(ConfigParams['NumStreaminVar'][VarNum])
     LargestIndexNotFound=1
     IndicesForStream=[]
     BoundsForStream=[]
@@ -86,7 +94,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     IndexInit=''
     if debug:
     	print "\n\t Maxstride: "+str(ConfigParams['maxstride'][VarNum]) +' for VarNum: '+str(VarNum)
-    for i in range(ConfigParams['NumStreaminDims'][VarNum]):
+    for i in range(ConfigParams['NumStreaminVar'][VarNum]):
     	if(LargestIndexNotFound and (ConfigParams['StrideinStream'][VarNum][i]==ConfigParams['maxstride'][VarNum]) ):
 	    	LargestIndexNotFound=0
 	    	
@@ -113,7 +121,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	   	
     if debug:
     	print "\n\t IndexDecl: "+str(IndexDecl)+' Bounds: '+str(BoundsForStream[0])
-    if(ConfigParams['NumStreaminDims'][VarNum] > 1):
+    if(ConfigParams['NumStreaminVar'][VarNum] > 1):
     	ThisLoop.append(IndexDecl)
     for j in range(NumDims):
 		if(j==StrideDim):
@@ -136,7 +144,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		TabSpace+='\t'
     MaxstrideDimNotFound=1	
     eqn=''
-    for k in range(ConfigParams['NumStreaminDims'][VarNum]):
+    for k in range(ConfigParams['NumStreaminVar'][VarNum]):
 	    #eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
 	    LHSindices=''
 	    RHSindices=''
@@ -152,8 +160,10 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 
 		
 		#print "\n\t LHS: "+str(LHSindices)+" RHS: "+str(RHSindices)
-	
-	    eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
+		
+	    #for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
+	    StreamVar='Var'+str(VarNum)+'_Stream'+str(k)
+	    eqn="\t"+TabSpace+str(StreamVar)+LHSindices+' = '+'Sum'+' + '+str(StreamVar)+RHSindices+';'
 	    #print "\n\t eqn: "+str(eqn)
 	    if debug:
 	    	print "\n So, the equation is: "+str(eqn)	
@@ -215,7 +225,7 @@ def main(argv):
 	ConfigParams['NumVars']=''
 	ConfigParams['NumStreams']=''
 	ConfigParams['init']=[]	
-	ConfigParams['NumStreaminDims']=[]
+	ConfigParams['NumStreaminVar']=[]
 	ConfigParams['StrideinStream']=[]
 	
 	LineCount=0;
@@ -264,11 +274,11 @@ def main(argv):
 			MatchObj=re.match(r'\s*\#StreamDims',CurrLine)
 			if MatchObj:
 				tmp=re.split(' ',CurrLine)
-				NumStreaminDims=re.split(',',tmp[1])
-				if NumStreaminDims:
+				NumStreaminVar=re.split(',',tmp[1])
+				if NumStreaminVar:
 					LineNotProcessed=0
 					CurrDim=0;
-					for CurrStreamDim in NumStreaminDims:
+					for CurrStreamDim in NumStreaminVar:
 						CheckSpace=re.match(r'^\s*$',CurrStreamDim)
 					        if(CheckSpace):
 					       		if debug:
@@ -277,7 +287,7 @@ def main(argv):
 					       	else:
 							CurrStreamDim=re.sub(r'^\s*','',CurrStreamDim)
 							CurrStreamDim=re.sub(r'\s*$','',CurrStreamDim)						       	
-							ConfigParams['NumStreaminDims'].append( int(CurrStreamDim))
+							ConfigParams['NumStreaminVar'].append( int(CurrStreamDim))
 							CurrDim+=1				
 							if debug:
 					       			print "\n\t #Streams for dim "+str(CurrDim)+" is "+str(CurrStreamDim)+"\n" 
@@ -345,8 +355,8 @@ def main(argv):
 									Count+=1				
 									if debug:
 							       			print "\n\t Stride for stream "+str(Count) +' in dim '+str(SearchingDim)+" "+str(Count)+" is "+str(CurrStride)+"\n" 
-							if(Count != ConfigParams['NumStreaminDims'][SearchingDim]):
-								print "\n\t The stride parameter is not specified for specified number of streams "+str(ConfigParams['NumStreaminDims'][SearchingDim])+" in dimension "+str(SearchingDim)+", it is specified only for "+str(Count)+ " streams. "
+							if(Count != ConfigParams['NumStreaminVar'][SearchingDim]):
+								print "\n\t The stride parameter is not specified for specified number of streams "+str(ConfigParams['NumStreaminVar'][SearchingDim])+" in dimension "+str(SearchingDim)+", it is specified only for "+str(Count)+ " streams. "
 								sys.exit(0)
 							else:
 								ConfigParams['StrideinStream'].append(StrideInThisDim)
@@ -475,7 +485,7 @@ def main(argv):
 		
 		for CurrDim in range(ConfigParams['NumVars']):
 			largest=0
-			for j in range(ConfigParams['NumStreaminDims'][CurrDim]):
+			for j in range(ConfigParams['NumStreaminVar'][CurrDim]):
 				if(largest < ConfigParams['StrideinStream'][CurrDim][j]):
 					largest=ConfigParams['StrideinStream'][CurrDim][j]
 			ConfigParams['maxstride'].append(largest)
@@ -485,92 +495,101 @@ def main(argv):
 		#sys.exit()
 		
 		for index in range(ConfigParams['NumVars']):
-			VarDecl=''
-			datatype=VarDecl
-			if(ConfigParams['datastructure'][index]=='f' or ConfigParams['datastructure'][index]=='float'):
-				VarDecl='float' 
-				datatype=VarDecl
-				if debug:
-					print "\n\t Allocated float to variable "+str(index)
-			elif(ConfigParams['datastructure'][index]=='d' or ConfigParams['datastructure'][index]=='double'):
-				VarDecl='double' 
-				datatype=VarDecl
-				if debug:
-					print "\n\t Allocated double to variable "+str(index)				
-			elif(ConfigParams['datastructure'][index]=='i' or ConfigParams['datastructure'][index]=='integer'):
-				VarDecl='int' 
-				datatype=VarDecl
-				if debug:
-					print "\n\t Allocated integer to variable "+str(index)								
-			else:
-				print "\n\t Supported datastructure is only float, double, integer. Dimension "+str(index)+" requests one of the nonsupported datastructure: "+str(ConfigParams['datastructure'][index])+"\n"
-				sys.exit(0)
-				
-			if( ConfigParams['alloc'][index]=='d' or ConfigParams['alloc'][index]=='dynamic'):
-				
-				var=' Var'+str(index)
-				prefix=''
-				suffix=''
-				for CurrDim in range(ConfigParams['Dims']):
-				   prefix+='*'
-				for CurrDim in range(ConfigParams['Dims']-1):
-				   suffix+='*'				   
-				VarDecl+=prefix+var+';'
-				if debug:
-					print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
-				DynAlloc.append(VarDecl)
-				if(Dims==1):
-					tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+'*'+str(ConfigParams['maxstride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
+				VarDeclStmt=[]
+			
+				VarDecl=''
+				datatype=''
+				if(ConfigParams['datastructure'][index]=='f' or ConfigParams['datastructure'][index]=='float'):
+					VarDecl='float' 
+					datatype=VarDecl
+					if debug:
+						print "\n\t Allocated float to variable "+str(index)
+				elif(ConfigParams['datastructure'][index]=='d' or ConfigParams['datastructure'][index]=='double'):
+					VarDecl='double' 
+					datatype=VarDecl
+					if debug:
+						print "\n\t Allocated double to variable "+str(index)				
+				elif(ConfigParams['datastructure'][index]=='i' or ConfigParams['datastructure'][index]=='integer'):
+					VarDecl='int' 
+					datatype=VarDecl
+					if debug:
+						print "\n\t Allocated integer to variable "+str(index)								
 				else:
-					tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * sizeof('+datatype+suffix+'))'+';'
-				
-				DynAlloc.append(tmp);
-				  		
-				if debug:
-					print "\n\t This is how the first malloc statement look: "+str(tmp)+"\n"
-				
-				if(ConfigParams['Dims']>1):
-					NumForLoops=''
-					for i in range(ConfigParams['Dims']-1):
-						NumForLoops=i+1
-						MallocLHS=var
-						for j in range(NumForLoops):
-							ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
-							if debug:
-								print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
-							DynAlloc.append(ThisForLoop);
-							MallocLHS+='['+str(ConfigParams['indices'][j])+']'
+					print "\n\t Supported datastructure is only float, double, integer. Dimension "+str(index)+" requests one of the nonsupported datastructure: "+str(ConfigParams['datastructure'][index])+"\n"
+					sys.exit(0)
+				VarType=str(datatype)
+				if( ConfigParams['alloc'][index]=='d' or ConfigParams['alloc'][index]=='dynamic'):
+					for CurrStream in range(ConfigParams['NumStreaminVar'][index]):
+						VarDecl=datatype
+						var=' Var'+str(index)+'_Stream'+str(CurrStream)
 						prefix=''
 						suffix=''
-						for CurrDim in range(ConfigParams['Dims']-i-1):
+						for CurrDim in range(ConfigParams['Dims']):
 						   prefix+='*'
-						for CurrDim in range(ConfigParams['Dims']-i-2):
-						   suffix+='*'	
-						if(i==(ConfigParams['Dims']-2)): # Since the loop is going from 0 to ConfigParams['Dims']-2
-							MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * '+str(ConfigParams['maxstride'][index])+' * sizeof('+datatype+suffix+'))'+';'		
+						for CurrDim in range(ConfigParams['Dims']-1):
+						   suffix+='*'				   
+						VarDecl+=prefix+var 
+						VarDeclStmt.append(VarDecl)
+						VarDecl+=';'
+						if debug:
+							print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
+						DynAlloc.append(VarDecl)
+						if(ConfigParams['Dims']==1):
+							tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+'*'+str(ConfigParams['StrideinStream'][VarNum][CurrStream])+' * sizeof('+datatype+suffix+'))'+';'		
 						else:
-							MallocEqn=MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * sizeof('+datatype+suffix+'))'+';'		
-						DynAlloc.append(MallocEqn)
-				   		if debug:
-							print "\t The malloc equation is: "+str(MallocEqn)+"\n"
-				VarType=str(datatype)
-				for i in range(ConfigParams['Dims']):
-					VarType+='*'
-				ConfigParams['VarDecl'].append(VarType)
-				if debug:
-					print "\n\t ConfigParams['VarDecl']: "+VarType
+							tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * sizeof('+datatype+suffix+'))'+';'
 				
-			else:
-				VarDecl+=' Var'+str(index)
-				for CurrDim in range(Dims-1):
-					VarDecl+='['+str(ConfigParams['size'][CurrDim])+']'
-				VarDecl+='['+str(ConfigParams['size'][ConfigParams['Dims']-1])+' * '+str(ConfigParams['maxstride'][index])+']'
-				ConfigParams['VarDecl'].append(VarDecl)
-				VarDecl+=';'
-				if debug:
-					print "\n\t Variable declaration for variable "+str(index)+" is static and is as follows: "+str(VarDecl)+"\n"
-				LibAlloc.append(VarDecl)
-
+						DynAlloc.append(tmp);
+						  		
+					if debug:
+						print "\n\t This is how the first malloc statement look: "+str(tmp)+"\n"
+				
+					if(ConfigParams['Dims']>1):
+						NumForLoops=''
+						for i in range(ConfigParams['Dims']-1):
+							NumForLoops=i+1
+							MallocLHS=''
+							for j in range(NumForLoops):
+								ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+								if debug:
+									print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
+								DynAlloc.append(ThisForLoop);
+								DynAlloc.append('{')
+								MallocLHS+='['+str(ConfigParams['indices'][j])+']'
+							prefix=''
+							suffix=''
+							for CurrDim in range(ConfigParams['Dims']-i-1):
+							   prefix+='*'
+							for CurrDim in range(ConfigParams['Dims']-i-2):
+							   suffix+='*'	
+							for CurrStream in range(ConfigParams['NumStreaminVar'][index]):  
+								var=' Var'+str(index)+'_Stream'+str(CurrStream) 
+								if(i==(ConfigParams['Dims']-2)): # Since the loop is going from 0 to ConfigParams['Dims']-2
+									MallocEqn=var+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * '+str(ConfigParams['StrideinStream'][index][CurrStream])+' * sizeof('+datatype+suffix+'))'+';'		
+								else:
+									MallocEqn=var+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * sizeof('+datatype+suffix+'))'+';'		
+								DynAlloc.append(MallocEqn)
+						   		if debug:
+									print "\t The malloc equation is: "+str(MallocEqn)+"\n"
+							for j in range(NumForLoops):
+								DynAlloc.append('}')
+					
+				else:
+					
+					VarDecl=''				
+					for CurrDim in range(Dims-1):
+						VarDecl+='['+str(ConfigParams['size'][CurrDim])+']'					
+					for CurrStream in range(ConfigParams['NumStreaminVar'][index]):
+						CurrStreamVar=' Var'+str(index)+'_Stream'+str(CurrStream)
+						StreamVarDecl=datatype+' '+CurrStreamVar+VarDecl+'['+str(ConfigParams['size'][ConfigParams['Dims']-1])+' * '+str(ConfigParams['StrideinStream'][index][CurrStream])+']'
+					#ConfigParams['VarDecl'].append(VarDecl)
+						VarDeclStmt.append(StreamVarDecl)
+						StreamVarDecl+=';'
+						if debug:
+							print "\n\t Variable declaration for variable "+str(index)+" is static and is as follows: "+str(StreamVarDecl)+"\n"
+						
+						LibAlloc.append(StreamVarDecl)
+				ConfigParams['VarDecl'].append(VarDeclStmt)
 	
 			#InitAlloc[index]=[]
 
@@ -590,9 +609,9 @@ def main(argv):
 			
 		StreamString=''
 		for i in range(ConfigParams['NumVars']-1):
-			StreamString+=str(ConfigParams['NumStreaminDims'][i])+'_'
+			StreamString+=str(ConfigParams['NumStreaminVar'][i])+'_'
 		
-		StreamString+=str(ConfigParams['NumStreaminDims'][ConfigParams['NumVars']-1])
+		StreamString+=str(ConfigParams['NumStreaminVar'][ConfigParams['NumVars']-1])
 					
  						
 	else:
@@ -604,10 +623,11 @@ def main(argv):
 		
 	InitLoop=[]
 	for VarNum in range(ConfigParams['NumVars']):
-		CurrVar='Var'+str(VarNum)		
-		Temp=InitVar(CurrVar,VarNum,ConfigParams,debug)	
-		InitLoop.append(Temp)
-		#WriteArray(ThisLoop,WriteFile)	
+		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
+			CurrVar='Var'+str(VarNum)+'_Stream'+str(CurrStream)		
+			Temp=InitVar(CurrVar,VarNum,CurrStream,ConfigParams,debug)	
+			InitLoop.append(Temp)
+			#WriteArray(ThisLoop,WriteFile)	
  	
 	ThisLoop=[]
 	Comments=[]
