@@ -148,9 +148,9 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     	if(LargestIndexNotFound and (ConfigParams['StrideinStream'][VarNum][i]==ConfigParams['maxstride'][VarNum]) ):
 	    	LargestIndexNotFound=0
 	    	
-	   	bounds= '( (' + str(ConfigParams['size'][StrideDim]) +' * '+ str(ConfigParams['maxstride'][VarNum] )+' ) - '  + str(ConfigParams['StrideinStream'][VarNum][i])+')'   	
+	   	bounds= '(' + str(ConfigParams['size'][StrideDim]) +' - '  + str(ConfigParams['StrideinStream'][VarNum][i])+')'   	
 	   	BoundsForStream.insert(0,str(bounds))
-	   	CurrIndexIncr=str(ConfigParams['indices'][StrideDim])+'+= '+str(ConfigParams['StrideinStream'][VarNum][i])
+	   	CurrIndexIncr=str(ConfigParams['indices'][StrideDim])+'+= 1' #+str(ConfigParams['StrideinStream'][VarNum][i])
 	   	IndexIncr=str(CurrIndexIncr)+str(IndexIncr)    	
 	    	if debug:
 	    		print "\n\t The boss is here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)
@@ -158,8 +158,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	else:
 	   	index=str('StreamIndex'+str(i))
 	   	IndicesForStream.append(index)
-	   	bounds= '( (' + str(ConfigParams['size'][VarNum]) +' * '+ str(ConfigParams['maxstride'][VarNum] )+' ) - '  + str(ConfigParams['StrideinStream'][VarNum][i])+')'      	
-	   	BoundsForStream.append(str(bounds))
+	   	#bounds= '( (' + str(ConfigParams['size'][VarNum]) +' * '+ str(ConfigParams['maxstride'][VarNum] )+' ) - '  + str(ConfigParams['StrideinStream'][VarNum][i])+')'      	
+	   	#BoundsForStream.append(str(bounds))
 	   	CurrIndexIncr=','+str(index)+'+= '+str(ConfigParams['StrideinStream'][VarNum][i])
 	   	IndexIncr+=CurrIndexIncr
 	   	IndexDecl+=' int '+str(index)+'=0;'
