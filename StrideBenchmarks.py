@@ -66,15 +66,16 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     	VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream]+','
     	VarDeclString+='Var'+str(VarNum)+'_Stream'+str(CurrStream)+','
  
-    FuncName=' Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarDeclString+str(Stride)+',Sum'+');'	    
+    FuncName='Sum=Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarDeclString+str(Stride)+',Sum'+');'	    
     ThisLoop=[]
     ThisLoop.append('Sum=2;')
     ThisLoop.append(FuncName) 
-    
+    PrintResult='printf("\\n\\t Sum: %d ",Sum);'
+    #ThisLoop.append(PrintResult)
     if(ConfigParams['alloc'][VarNum]=='d' or ConfigParams['alloc'][VarNum]=='dynamic'):
-	    FuncDecl='void Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarFuncDeclString+' int Stride, int Sum )'
+	    FuncDecl='int Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarFuncDeclString+' int Stride, int Sum )'
     else:
-    	    FuncDecl='void Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarFuncDeclString+' int Stride, int Sum )'
+    	    FuncDecl='int Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarFuncDeclString+' int Stride, int Sum )'
     ThisLoop.append(FuncDecl)
     ThisLoop.append('{')
     ThisLoop.append(str(ConfigParams['indices'][len(ConfigParams['indices'])-1]))
@@ -91,10 +92,16 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     IndexIncr=''
     IndexDecl=''
     StrideIndex=[]
+    AccumVar=[]
     IndexInit=''
+    CurrAccumVarDecl=''
     if debug:
     	print "\n\t Maxstride: "+str(ConfigParams['maxstride'][VarNum]) +' for VarNum: '+str(VarNum)
     for i in range(ConfigParams['NumStreaminVar'][VarNum]):
+    	CurrAccumVar=str('Accum')+str(i)
+ 	AccumVar.append(CurrAccumVar)
+ 	CurrAccumVarDecl+=' int '+str(CurrAccumVar)+'=0;'
+    	
     	if(LargestIndexNotFound and (ConfigParams['StrideinStream'][VarNum][i]==ConfigParams['maxstride'][VarNum]) ):
 	    	LargestIndexNotFound=0
 	    	
@@ -108,7 +115,6 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	else:
 	   	index=str('StreamIndex'+str(i))
 	   	IndicesForStream.append(index)
-	   	
 	   	bounds= '( (' + str(ConfigParams['size'][VarNum]) +' * '+ str(ConfigParams['maxstride'][VarNum] )+' ) - '  + str(ConfigParams['StrideinStream'][VarNum][i])+')'      	
 	   	BoundsForStream.append(str(bounds))
 	   	CurrIndexIncr=','+str(index)+'+= '+str(ConfigParams['StrideinStream'][VarNum][i])
@@ -118,7 +124,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	   	if debug:
 	   		print "\n\t The minnions are here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)
 	   	StrideIndex.append(str(index))
-	   	
+
+    ThisLoop.append(CurrAccumVarDecl)		   	
     if debug:
     	print "\n\t IndexDecl: "+str(IndexDecl)+' Bounds: '+str(BoundsForStream[0])
     if(ConfigParams['NumStreaminVar'][VarNum] > 1):
@@ -163,7 +170,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		
 	    #for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
 	    StreamVar='Var'+str(VarNum)+'_Stream'+str(k)
-	    eqn="\t"+TabSpace+str(StreamVar)+LHSindices+' = '+'Sum'+' + '+str(StreamVar)+RHSindices+';'
+	    #eqn="\t"+TabSpace+str(StreamVar)+LHSindices+' = '+'Sum'+' + '+str(StreamVar)+RHSindices+';'
+	    eqn="\t"+TabSpace+AccumVar[k]+'+='+str(StreamVar)+RHSindices+';'
 	    #print "\n\t eqn: "+str(eqn)
 	    if debug:
 	    	print "\n So, the equation is: "+str(eqn)	
@@ -175,7 +183,12 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     		TabSpace+="\t"
     	ThisLoop.append(TabSpace+'}')
     ThisLoop.append('printf(" ");')
-    ThisLoop.append('return ;')
+    AccumEqn=' Sum+=(';
+    for k in range(ConfigParams['NumStreaminVar'][VarNum]-1):
+    	    AccumEqn+=AccumVar[k]+'+'
+    AccumEqn+=AccumVar[ConfigParams['NumStreaminVar'][VarNum]-1]+');'
+    #ThisLoop.append(AccumEqn) 
+    ThisLoop.append('return Sum;')
     ThisLoop.append('}')
     return ThisLoop
 
@@ -623,11 +636,12 @@ def main(argv):
 		
 	InitLoop=[]
 	for VarNum in range(ConfigParams['NumVars']):
+		ThisVarInit=[]
 		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
 			CurrVar='Var'+str(VarNum)+'_Stream'+str(CurrStream)		
 			Temp=InitVar(CurrVar,VarNum,CurrStream,ConfigParams,debug)	
-			InitLoop.append(Temp)
-			#WriteArray(ThisLoop,WriteFile)	
+			ThisVarInit.append(Temp)
+		InitLoop.append(ThisVarInit)
  	
 	ThisLoop=[]
 	Comments=[]
@@ -642,6 +656,7 @@ def main(argv):
 		#Comments.append('//')
 		Comments.append(ThisLoop[VarNum].pop(0))
 		Comments.append(ThisLoop[VarNum].pop(0))
+		#Comments.append(ThisLoop[VarNum].pop(0))
 		#WriteArray(ThisLoop,WriteFile)	
 		
 
@@ -656,13 +671,14 @@ def main(argv):
 	WriteArray(DynAlloc,WriteFile)
 	WriteFile.write("\n\t int Sum=0;")
 	for VarNum in range(ConfigParams['NumVars']):
-		WriteArray(InitLoop[VarNum],WriteFile)	
+		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
+			WriteArray(InitLoop[VarNum][CurrStream],WriteFile)	
 	
 	#for VarNum in range(ConfigParams['NumVars']):
 	WriteArray(Comments,WriteFile)	
 
 
-	
+	#WriteFile.write('\n\t printf("\\n");')
 	WriteFile.write("\n\t return 0;")
 	WriteFile.write("\n\t}")
 	WriteFile.close()		
