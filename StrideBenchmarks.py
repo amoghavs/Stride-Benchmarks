@@ -169,8 +169,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	   	IndicesForStream.append(index)
 	   	#bounds= '( (' + str(ConfigParams['size'][VarNum]) +' * '+ str(ConfigParams['maxstride'][VarNum] )+' ) - '  + str(ConfigParams['StrideinStream'][VarNum][i])+')'      	
 	   	#BoundsForStream.append(str(bounds))
-	   	#CurrIndexIncr=','+str(index)+'+= '+str(ConfigParams['StrideinStream'][VarNum][i])
-	   	#IndexIncr+=CurrIndexIncr
+	   	CurrIndexIncr=','+str(index)+'+= '+str(ConfigParams['StrideinStream'][VarNum][i])
+	   	IndexIncr+=CurrIndexIncr
 	   	IndexDecl+='long int '+str(index)+'=0;'
 	   	IndexInit+=','+str(index)+'=0'
 	   	if debug:
@@ -224,7 +224,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    for j in range(NumDims):
 		if(j==StrideDim):
 			#RHSindices+='['+str(ConfigParams['IndirVar'][VarNum][k])+'['+str(ConfigParams['indices'][j])+'] ]'
-			RHSindices+='['+str(ConfigParams['indices'][j])+']'	
+			#RHSindices+='['+str(ConfigParams['indices'][j])+']'	
+			RHSindices+='['+str(StrideIndex[k])+']'
 		else:
 			#LHSindices+='['+str(ConfigParams['indices'][j])+']'
 			RHSindices+='['+str(ConfigParams['indices'][j])+']'
@@ -234,8 +235,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		
 	    #for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
 	    StreamVar='Var'+str(VarNum)+'_Stream'+str(k)
-	    #eqn="\t"+TabSpace+str(StreamVar)+RHSindices+' = '+AccumVar[k]+' + '+str(StreamVar)+RHSindices+';'
-	    eqn="\t"+TabSpace+AccumVar[k]+'+='+str(StreamVar)+RHSindices+';'
+	    eqn="\t"+TabSpace+str(StreamVar)+RHSindices+' = '+AccumVar[k]+' + '+str(StreamVar)+RHSindices+';'
+	    #eqn="\t"+TabSpace+AccumVar[k]+'+='+str(StreamVar)+RHSindices+';'
 	    #print "\n\t eqn: "+str(eqn)
 	    if debug:
 	    	print "\n So, the equation is: "+str(eqn)	
@@ -697,9 +698,18 @@ def main(argv):
 		SizeString+=str(ConfigParams['size'][ConfigParams['Dims']-1])
 		
 		StrideString=''
-		for i in range(ConfigParams['NumVars']-1):
-			StrideString+=str(ConfigParams['maxstride'][i])+'_'
-		StrideString+=str(ConfigParams['maxstride'][ConfigParams['NumVars']-1])
+		for index in range(ConfigParams['NumVars']-1):
+			for CurrStream in range(ConfigParams['NumStreaminVar'][index]):
+				StrideString+=str(ConfigParams['StrideinStream'][index][CurrStream])+'_'
+		
+		index=ConfigParams['NumVars']-1
+		for CurrStream in range(ConfigParams['NumStreaminVar'][index]-1):
+			StrideString+=str(ConfigParams['StrideinStream'][index][CurrStream])+'_'
+		StrideString+=str(ConfigParams['StrideinStream'][index][(ConfigParams['NumStreaminVar'][index]-1)])
+			
+		print "\n\t StrideString: "+str(StrideString)
+		#sys.exit()
+			
 		alloc_str=''
 		for CurrAlloc in ConfigParams['alloc']:
 			alloc_str+=str(CurrAlloc)
@@ -715,9 +725,8 @@ def main(argv):
 		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "
 		sys.exit(0)
 	
-	SrcFileName='StrideBenchmarks_Iters'+str(ConfigParams['NumIters'])+'_'+str(ConfigParams['NumVars'])+"vars_"+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_streams_'+str(StreamString)+'_maxstride_'+str(StrideString)+'.c'
-	WriteFile=open(SrcFileName,'w')	
-		
+	SrcFileName='StrideBenchmarks_Iters'+str(ConfigParams['NumIters'])+'_'+str(ConfigParams['NumVars'])+"vars_"+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_streams_'+str(StreamString)+'_stride_'+str(StrideString)+'.c'
+	WriteFile=open(SrcFileName,'w')			
 	InitLoop=[]
 	for VarNum in range(ConfigParams['NumVars']):
 		ThisVarInit=[]
