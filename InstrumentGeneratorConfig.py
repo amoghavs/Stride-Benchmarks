@@ -56,7 +56,7 @@ def main():
         Min['Stride']=0 # ie., 2^0=1
         Alloc=['d']    
         Init='index0'
-        DS='d'
+        DS='i'
         SpatWindow=[8,16,32];
         LoopIterationBase=10;
         LoopIterations=[1] #0,20] #,5,6];

@@ -152,14 +152,14 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     for i in range(ConfigParams['NumStreaminVar'][VarNum]):
     	CurrAccumVar=str('Accum')+str(i)
  	AccumVar.append(CurrAccumVar)
- 	CurrAccumVarDecl+='long int '+str(CurrAccumVar)+'='+str(i)+';'
+ 	CurrAccumVarDecl+='long int '+str(CurrAccumVar)+'='+str(i+1)+';'
     	
     	if(LargestIndexNotFound and (ConfigParams['StrideinStream'][VarNum][i]==ConfigParams['maxstride'][VarNum]) ):
 	    	LargestIndexNotFound=0
 	    	
-	   	bounds= '((' + str(ConfigParams['size'][StrideDim]) +' * '+str(ConfigParams['StrideinStream'][VarNum][i]) +' )- '  + str(ConfigParams['StrideinStream'][VarNum][i])+')'   	
+	   	bounds= '((' + str(ConfigParams['size'][StrideDim])+' * '+str(ConfigParams['StrideinStream'][VarNum][i] )+' )- '  + str(ConfigParams['StrideinStream'][VarNum][i])+')'   	
 	   	BoundsForStream.insert(0,str(bounds))
-	   	CurrIndexIncr=str(ConfigParams['indices'][StrideDim])+'+='+str(ConfigParams['StrideinStream'][VarNum][i])
+	   	CurrIndexIncr=str(ConfigParams['indices'][StrideDim])+'+= '+str(ConfigParams['StrideinStream'][VarNum][i])
 	   	IndexIncr=str(CurrIndexIncr)+str(IndexIncr)    	
 	    	if debug:
 	    		print "\n\t The boss is here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)
@@ -190,11 +190,11 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     ThisLoop.append(ThisForLoop)
     ThisLoop.append(TabSpace+'{')
     
-    AccumInit=TabSpace+'\t'
-    for k in range(ConfigParams['NumStreaminVar'][VarNum]):
-    	    AccumInit+=AccumVar[k]+'=0;'
+    #AccumInit=TabSpace+'\t'
+    #for k in range(ConfigParams['NumStreaminVar'][VarNum]):
+    #	    AccumInit+=AccumVar[k]+'=0;'
     #print "\n\t AccumInit: "  
-    ThisLoop.append(AccumInit)
+    #ThisLoop.append(AccumInit)
     for j in range(NumDims):
 		if(j==StrideDim):
 			#RHSindices+='['+str(ConfigParams['indices'][j])+']'
@@ -235,8 +235,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		
 	    #for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
 	    StreamVar='Var'+str(VarNum)+'_Stream'+str(k)
-	    #eqn="\t"+TabSpace+str(StreamVar)+RHSindices+' = '+AccumVar[k]+' + '+str(StreamVar)+RHSindices+';'
-	    eqn="\t"+TabSpace+AccumVar[k]+'+='+str(StreamVar)+RHSindices+';'
+	    eqn="\t"+TabSpace+str(StreamVar)+RHSindices+' = '+AccumVar[k]+' + '+str(StreamVar)+RHSindices+';'
+	    #eqn="\t"+TabSpace+AccumVar[k]+'+='+str(StreamVar)+RHSindices+';'
 	    #print "\n\t eqn: "+str(eqn)
 	    if debug:
 	    	print "\n So, the equation is: "+str(eqn)	
