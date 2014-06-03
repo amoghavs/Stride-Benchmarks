@@ -1,6 +1,7 @@
 #vars 2
 #dims 3
 #StreamDims 2,3
+#loop_iterations 4
 #stride0 2,1
 #stride1 2,3,2
 #size 20,20,200
